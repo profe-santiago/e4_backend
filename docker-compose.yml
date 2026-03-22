@@ -1,0 +1,51 @@
+services:
+
+  auth-db:
+    image: postgres:16
+    container_name: auth_db
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5432:5432"
+
+  user-db:
+    image: postgres:16
+    container_name: user_db
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5433:5432"
+
+  event-db:
+    image: postgres:16
+    container_name: event_db
+    environment:
+      POSTGRES_DB: event_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5434:5432"
+
+  payment-db:
+    image: postgres:16
+    container_name: payment_db
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5435:5432"
+
+  notification-db:
+    image: postgres:16
+    container_name: notification_db
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5436:5432"
