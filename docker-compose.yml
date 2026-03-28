@@ -40,6 +40,16 @@ services:
     ports:
       - "5445:5432"
 
+  ticket-db:
+    image: postgres:16
+    container_name: ticket_db
+    environment:
+      POSTGRES_DB: ticket_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5447:5432"
+
   notification-db:
     image: postgres:16
     container_name: notification_db
