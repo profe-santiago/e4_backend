@@ -1,0 +1,166 @@
+package com.tickets.ticket_service.config;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.tickets.ticket_service.messaging.event.OrderCancelledEvent;
+import com.tickets.ticket_service.messaging.event.OrderConfirmedEvent;
+import com.tickets.ticket_service.messaging.event.StockFailedEvent;
+import com.tickets.ticket_service.messaging.event.StockReserveCommand;
+import com.tickets.ticket_service.messaging.event.StockReservedEvent;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.DefaultClassMapper;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Topología RabbitMQ del ticket-service.
+ *
+ * Exchange principal: tickets.topic.exchange (TopicExchange)
+ * DLX:               tickets.dlx (DirectExchange)
+ *
+ * Queues que PUBLICA ticket-service:
+ *   stock.reserve.queue    ← routing key: stock.reserve   (event-service consume)
+ *   order.events.queue     ← routing key: order.*         (futuro: payment/notification)
+ *
+ * Queues que CONSUME ticket-service:
+ *   stock.reserved.queue   ← routing key: stock.reserved
+ *   stock.failed.queue     ← routing key: stock.failed
+ */
+@Configuration
+public class RabbitMQConfig {
+
+    @Value("${app.rabbitmq.exchange}")        private String exchange;
+    @Value("${app.rabbitmq.dlx}")             private String dlx;
+
+    @Value("${app.rabbitmq.queues.stock-reserved}") private String stockReservedQueue;
+    @Value("${app.rabbitmq.queues.stock-failed}")   private String stockFailedQueue;
+    @Value("${app.rabbitmq.queues.order-events}")   private String orderEventsQueue;
+
+    @Value("${app.rabbitmq.routing-keys.stock-reserve}")  private String rkStockReserve;
+    @Value("${app.rabbitmq.routing-keys.stock-reserved}") private String rkStockReserved;
+    @Value("${app.rabbitmq.routing-keys.stock-failed}")   private String rkStockFailed;
+    @Value("${app.rabbitmq.routing-keys.order-confirmed}")private String rkOrderConfirmed;
+    @Value("${app.rabbitmq.routing-keys.order-cancelled}")private String rkOrderCancelled;
+
+    // ── Exchanges ─────────────────────────────────────────────────────────────
+
+    @Bean
+    public TopicExchange ticketsExchange() {
+        return ExchangeBuilder.topicExchange(exchange).durable(true).build();
+    }
+
+    @Bean
+    public DirectExchange deadLetterExchange() {
+        return ExchangeBuilder.directExchange(dlx).durable(true).build();
+    }
+
+    // ── Queues consumidas por ticket-service ──────────────────────────────────
+
+    @Bean
+    public Queue stockReservedQueue() {
+        return QueueBuilder.durable(stockReservedQueue)
+                .withArgument("x-dead-letter-exchange", dlx)
+                .withArgument("x-dead-letter-routing-key", stockReservedQueue + ".dlq")
+                .build();
+    }
+
+    @Bean
+    public Queue stockFailedQueue() {
+        return QueueBuilder.durable(stockFailedQueue)
+                .withArgument("x-dead-letter-exchange", dlx)
+                .withArgument("x-dead-letter-routing-key", stockFailedQueue + ".dlq")
+                .build();
+    }
+
+    @Bean
+    public Queue orderEventsQueue() {
+        return QueueBuilder.durable(orderEventsQueue).build();
+    }
+
+    // ── Dead Letter Queues ────────────────────────────────────────────────────
+
+    @Bean
+    public Queue stockReservedDlq() {
+        return QueueBuilder.durable(stockReservedQueue + ".dlq").build();
+    }
+
+    @Bean
+    public Queue stockFailedDlq() {
+        return QueueBuilder.durable(stockFailedQueue + ".dlq").build();
+    }
+
+    // ── Bindings ──────────────────────────────────────────────────────────────
+
+    @Bean
+    public Binding stockReservedBinding() {
+        return BindingBuilder.bind(stockReservedQueue()).to(ticketsExchange()).with(rkStockReserved);
+    }
+
+    @Bean
+    public Binding stockFailedBinding() {
+        return BindingBuilder.bind(stockFailedQueue()).to(ticketsExchange()).with(rkStockFailed);
+    }
+
+    @Bean
+    public Binding orderEventsBinding() {
+        return BindingBuilder.bind(orderEventsQueue()).to(ticketsExchange()).with("order.*");
+    }
+
+    @Bean
+    public Binding stockReservedDlqBinding() {
+        return BindingBuilder.bind(stockReservedDlq()).to(deadLetterExchange())
+                .with(stockReservedQueue + ".dlq");
+    }
+
+    @Bean
+    public Binding stockFailedDlqBinding() {
+        return BindingBuilder.bind(stockFailedDlq()).to(deadLetterExchange())
+                .with(stockFailedQueue + ".dlq");
+    }
+
+    // ── Serialización: Jackson con type aliases (cross-service safe) ──────────
+
+    @Bean
+    public Jackson2JsonMessageConverter messageConverter() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.findAndRegisterModules();
+
+        DefaultClassMapper classMapper = new DefaultClassMapper();
+        classMapper.setTrustedPackages("com.tickets.*");
+        classMapper.setIdClassMapping(typeIdMappings());
+
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(mapper);
+        converter.setClassMapper(classMapper);
+        return converter;
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(messageConverter());
+        return template;
+    }
+
+    /**
+     * Aliases de tipos para serialización cross-service.
+     * Ambos servicios deben tener el mismo alias → el mapper local resuelve la clase correcta.
+     * Así se evita usar FQCNs que rompen cuando los packages difieren.
+     */
+    private Map<String, Class<?>> typeIdMappings() {
+        Map<String, Class<?>> mappings = new HashMap<>();
+        mappings.put("StockReserveCommand",  StockReserveCommand.class);
+        mappings.put("StockReservedEvent",   StockReservedEvent.class);
+        mappings.put("StockFailedEvent",     StockFailedEvent.class);
+        mappings.put("OrderConfirmedEvent",  OrderConfirmedEvent.class);
+        mappings.put("OrderCancelledEvent",  OrderCancelledEvent.class);
+        return mappings;
+    }
+}
