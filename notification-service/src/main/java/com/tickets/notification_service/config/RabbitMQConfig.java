@@ -2,9 +2,9 @@ package com.tickets.notification_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.tickets.notification_service.messaging.event.OrderCancelledEvent;
-import com.tickets.notification_service.messaging.event.OrderConfirmedEvent;
-import com.tickets.notification_service.messaging.event.PaymentCompletedEvent;
+import com.tickets.notification_service.notification.infrastructure.messaging.event.OrderCancelledEvent;
+import com.tickets.notification_service.notification.infrastructure.messaging.event.OrderConfirmedEvent;
+import com.tickets.notification_service.notification.infrastructure.messaging.event.PaymentCompletedEvent;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
