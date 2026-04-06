@@ -1,4 +1,4 @@
-package com.tickets.ticket_service.messaging.event;
+package com.tickets.payment_service.messaging.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,9 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * ticket-service publica esto cuando una orden queda confirmada y los tickets generados.
- * payment-service y notification-service consumirán este evento.
- * Alias RabbitMQ: "OrderConfirmedEvent"
+ * Espejo del evento publicado por ticket-service.
+ * Alias RabbitMQ: "OrderConfirmedEvent" — debe coincidir con el alias en ticket-service.
  */
 @Data
 @NoArgsConstructor
@@ -20,7 +19,7 @@ public class OrderConfirmedEvent {
     private UUID orderId;
     private UUID userId;
     private BigDecimal totalAmount;
-    /** ID del método de pago de Stripe (pm_xxxxx) para procesar el cobro */
+    /** ID del método de pago de Stripe (pm_xxxxx) para ejecutar el cobro */
     private String paymentMethodId;
     private List<ConfirmedTicket> tickets;
 

@@ -46,6 +46,7 @@ public class OrderServiceImpl implements OrderService {
         order.setUserId(userId);
         order.setStatus(OrderStatus.PENDING);
         order.setTotalAmount(BigDecimal.ZERO); // se actualiza al confirmar
+        order.setPaymentMethodId(request.getPaymentMethodId());
 
         List<OrderItem> items = request.getItems().stream()
                 .map(dto -> buildItem(dto, order))
@@ -95,7 +96,8 @@ public class OrderServiceImpl implements OrderService {
                 ticketService.generateTickets(saved);
 
         eventPublisher.publishOrderConfirmed(new OrderConfirmedEvent(
-                saved.getId(), saved.getUserId(), saved.getTotalAmount(), generatedTickets));
+                saved.getId(), saved.getUserId(), saved.getTotalAmount(),
+                saved.getPaymentMethodId(), generatedTickets));
 
         return OrderMapper.toResponse(saved);
     }

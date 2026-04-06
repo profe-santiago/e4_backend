@@ -34,6 +34,10 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
+    /** ID del método de pago de Stripe enviado por el cliente al crear la orden */
+    @Column(name = "payment_method_id", length = 255, nullable = false)
+    private String paymentMethodId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
