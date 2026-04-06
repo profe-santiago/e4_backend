@@ -2,9 +2,9 @@ package com.tickets.payment_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.tickets.payment_service.messaging.event.OrderConfirmedEvent;
-import com.tickets.payment_service.messaging.event.PaymentCompletedEvent;
-import com.tickets.payment_service.messaging.event.PaymentFailedEvent;
+import com.tickets.payment_service.payment.infrastructure.messaging.event.OrderConfirmedEvent;
+import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentCompletedEvent;
+import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentFailedEvent;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
