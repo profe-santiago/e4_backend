@@ -2,21 +2,23 @@ package com.tickets.user_service.user;
 
 import com.tickets.user_service.exception.UserAlreadyExistsException;
 import com.tickets.user_service.exception.UserNotFoundException;
-import com.tickets.user_service.user.dto.CreateUserRequest;
-import com.tickets.user_service.user.dto.UpdateUserRequest;
-import com.tickets.user_service.user.dto.UserResponse;
+import com.tickets.user_service.user.application.CreateUserUseCase;
+import com.tickets.user_service.user.application.DeleteUserUseCase;
+import com.tickets.user_service.user.application.GetUserByIdUseCase;
+import com.tickets.user_service.user.application.UpdateUserUseCase;
+import com.tickets.user_service.user.application.dto.CreateUserCommand;
+import com.tickets.user_service.user.application.dto.UpdateUserCommand;
+import com.tickets.user_service.user.domain.User;
+import com.tickets.user_service.user.domain.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,14 +30,11 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("UserServiceImpl")
+@DisplayName("User UseCases")
 class UserServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
-
-    @InjectMocks
-    private UserServiceImpl userService;
 
     private UUID userId;
     private User existingUser;
@@ -43,58 +42,48 @@ class UserServiceImplTest {
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID();
-
-        existingUser = new User();
-        existingUser.setId(userId);
-        existingUser.setFirstName("Juan");
-        existingUser.setLastName("Pérez");
-        existingUser.setEmail("juan@test.com");
-        existingUser.setPhone("123456789");
-        existingUser.setBirthDate(LocalDate.of(1990, 5, 20));
-        existingUser.setAvatarUrl("https://avatar.url");
-        // Simula @PrePersist
-        try {
-            var onCreate = User.class.getDeclaredMethod("onCreate");
-            onCreate.setAccessible(true);
-            onCreate.invoke(existingUser);
-        } catch (Exception e) {
-            existingUser.setCreatedAt(LocalDateTime.now());
-        }
+        existingUser = User.create(
+                userId, "Juan", "Pérez", "juan@test.com",
+                "123456789", LocalDate.of(1990, 5, 20), "https://avatar.url");
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // createUser
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── CreateUserUseCase ─────────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("createUser")
-    class CreateUser {
+    @DisplayName("CreateUserUseCase")
+    class CreateUserTests {
+
+        private CreateUserUseCase useCase;
+
+        @BeforeEach
+        void init() { useCase = new CreateUserUseCase(userRepository); }
 
         @Test
-        @DisplayName("debe crear el usuario y retornar UserResponse cuando el email no existe")
+        @DisplayName("debe crear el usuario cuando el email no existe")
         void shouldCreateUser_whenEmailDoesNotExist() {
-            CreateUserRequest request = buildCreateRequest("juan@test.com");
-            given(userRepository.existsByEmail(request.getEmail())).willReturn(false);
+            CreateUserCommand command = new CreateUserCommand(
+                    userId, "Juan", "Pérez", "juan@test.com",
+                    "123456789", LocalDate.of(1990, 5, 20), null);
+
+            given(userRepository.existsByEmail("juan@test.com")).willReturn(false);
             given(userRepository.save(any(User.class))).willReturn(existingUser);
 
-            UserResponse response = userService.createUser(userId, request);
+            User result = useCase.execute(command);
 
-            ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-            then(userRepository).should().save(captor.capture());
-            User saved = captor.getValue();
-
-            assertThat(saved.getId()).isEqualTo(userId);
-            assertThat(saved.getEmail()).isEqualTo("juan@test.com");
-            assertThat(response.getId()).isEqualTo(userId);
-            assertThat(response.getEmail()).isEqualTo("juan@test.com");
+            assertThat(result.getId()).isEqualTo(userId);
+            assertThat(result.getEmail()).isEqualTo("juan@test.com");
+            then(userRepository).should().save(any(User.class));
         }
 
         @Test
-        @DisplayName("debe lanzar UserAlreadyExistsException cuando el email ya está registrado")
+        @DisplayName("debe lanzar UserAlreadyExistsException cuando el email ya existe")
         void shouldThrow_whenEmailAlreadyExists() {
-            CreateUserRequest request = buildCreateRequest("juan@test.com");
-            given(userRepository.existsByEmail(request.getEmail())).willReturn(true);
+            CreateUserCommand command = new CreateUserCommand(
+                    userId, "Juan", "Pérez", "juan@test.com", null, null, null);
 
-            assertThatThrownBy(() -> userService.createUser(userId, request))
+            given(userRepository.existsByEmail("juan@test.com")).willReturn(true);
+
+            assertThatThrownBy(() -> useCase.execute(command))
                     .isInstanceOf(UserAlreadyExistsException.class)
                     .hasMessageContaining("juan@test.com");
 
@@ -102,146 +91,114 @@ class UserServiceImplTest {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // findById
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── GetUserByIdUseCase ────────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("findById")
-    class FindById {
+    @DisplayName("GetUserByIdUseCase")
+    class GetUserByIdTests {
+
+        private GetUserByIdUseCase useCase;
+
+        @BeforeEach
+        void init() { useCase = new GetUserByIdUseCase(userRepository); }
 
         @Test
-        @DisplayName("debe retornar UserResponse cuando el usuario existe")
+        @DisplayName("debe retornar el usuario cuando existe")
         void shouldReturnUser_whenFound() {
             given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 
-            UserResponse response = userService.findById(userId);
+            User result = useCase.execute(userId);
 
-            assertThat(response.getId()).isEqualTo(userId);
-            assertThat(response.getFirstName()).isEqualTo("Juan");
+            assertThat(result.getId()).isEqualTo(userId);
+            assertThat(result.getFirstName()).isEqualTo("Juan");
         }
 
         @Test
-        @DisplayName("debe lanzar UserNotFoundException cuando el usuario no existe")
+        @DisplayName("debe lanzar UserNotFoundException cuando no existe")
         void shouldThrow_whenNotFound() {
             UUID unknownId = UUID.randomUUID();
             given(userRepository.findById(unknownId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> userService.findById(unknownId))
+            assertThatThrownBy(() -> useCase.execute(unknownId))
                     .isInstanceOf(UserNotFoundException.class)
                     .hasMessageContaining(unknownId.toString());
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // findByEmail
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── UpdateUserUseCase ─────────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("findByEmail")
-    class FindByEmail {
+    @DisplayName("UpdateUserUseCase")
+    class UpdateUserTests {
+
+        private UpdateUserUseCase useCase;
+
+        @BeforeEach
+        void init() { useCase = new UpdateUserUseCase(userRepository); }
 
         @Test
-        @DisplayName("debe retornar UserResponse cuando el email existe")
-        void shouldReturnUser_whenFound() {
-            given(userRepository.findByEmail("juan@test.com")).willReturn(Optional.of(existingUser));
-
-            UserResponse response = userService.findByEmail("juan@test.com");
-
-            assertThat(response.getEmail()).isEqualTo("juan@test.com");
-        }
-
-        @Test
-        @DisplayName("debe lanzar UserNotFoundException cuando el email no existe")
-        void shouldThrow_whenNotFound() {
-            given(userRepository.findByEmail("no@existe.com")).willReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userService.findByEmail("no@existe.com"))
-                    .isInstanceOf(UserNotFoundException.class)
-                    .hasMessageContaining("no@existe.com");
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // updateUser
-    // ─────────────────────────────────────────────────────────────────────────
-    @Nested
-    @DisplayName("updateUser")
-    class UpdateUser {
-
-        @Test
-        @DisplayName("debe actualizar solo los campos presentes en el request")
+        @DisplayName("debe actualizar solo los campos presentes en el comando")
         void shouldUpdateOnlyPresentFields() {
-            UpdateUserRequest request = new UpdateUserRequest();
-            request.setFirstName("Carlos");
-            request.setPhone("999888777");
+            UpdateUserCommand command = new UpdateUserCommand(
+                    userId, "Carlos", null, "999888777", null, null);
 
             given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
             given(userRepository.save(any(User.class))).willReturn(existingUser);
 
-            userService.updateUser(userId, request);
+            useCase.execute(command);
 
-            ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-            then(userRepository).should().save(captor.capture());
-            User updated = captor.getValue();
-
-            assertThat(updated.getFirstName()).isEqualTo("Carlos");
-            assertThat(updated.getPhone()).isEqualTo("999888777");
-            // el apellido NO cambia porque no vino en el request
-            assertThat(updated.getLastName()).isEqualTo("Pérez");
+            assertThat(existingUser.getFirstName()).isEqualTo("Carlos");
+            assertThat(existingUser.getPhone()).isEqualTo("999888777");
+            assertThat(existingUser.getLastName()).isEqualTo("Pérez"); // sin cambio
         }
 
         @Test
-        @DisplayName("debe lanzar UserNotFoundException cuando el usuario no existe")
+        @DisplayName("debe lanzar UserNotFoundException cuando no existe")
         void shouldThrow_whenNotFound() {
             UUID unknownId = UUID.randomUUID();
+            UpdateUserCommand command = new UpdateUserCommand(
+                    unknownId, null, null, null, null, null);
+
             given(userRepository.findById(unknownId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> userService.updateUser(unknownId, new UpdateUserRequest()))
+            assertThatThrownBy(() -> useCase.execute(command))
                     .isInstanceOf(UserNotFoundException.class);
 
             then(userRepository).should(never()).save(any());
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // deleteUser
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── DeleteUserUseCase ─────────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("deleteUser")
-    class DeleteUser {
+    @DisplayName("DeleteUserUseCase")
+    class DeleteUserTests {
+
+        private DeleteUserUseCase useCase;
+
+        @BeforeEach
+        void init() { useCase = new DeleteUserUseCase(userRepository); }
 
         @Test
         @DisplayName("debe eliminar el usuario cuando existe")
         void shouldDelete_whenUserExists() {
             given(userRepository.existsById(userId)).willReturn(true);
 
-            userService.deleteUser(userId);
+            useCase.execute(userId);
 
             then(userRepository).should().deleteById(userId);
         }
 
         @Test
-        @DisplayName("debe lanzar UserNotFoundException cuando el usuario no existe")
+        @DisplayName("debe lanzar UserNotFoundException cuando no existe")
         void shouldThrow_whenNotFound() {
             UUID unknownId = UUID.randomUUID();
             given(userRepository.existsById(unknownId)).willReturn(false);
 
-            assertThatThrownBy(() -> userService.deleteUser(unknownId))
+            assertThatThrownBy(() -> useCase.execute(unknownId))
                     .isInstanceOf(UserNotFoundException.class);
 
             then(userRepository).should(never()).deleteById(any());
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // helpers
-    // ─────────────────────────────────────────────────────────────────────────
-    private CreateUserRequest buildCreateRequest(String email) {
-        CreateUserRequest req = new CreateUserRequest();
-        req.setFirstName("Juan");
-        req.setLastName("Pérez");
-        req.setEmail(email);
-        req.setPhone("123456789");
-        req.setBirthDate(LocalDate.of(1990, 5, 20));
-        return req;
     }
 }
