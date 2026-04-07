@@ -1,6 +1,6 @@
 package com.tickets.ticket_service.exception;
 
-import com.tickets.ticket_service.order.OrderStatus;
+import com.tickets.ticket_service.order.domain.OrderStatus;
 
 public class InvalidOrderStateException extends RuntimeException {
     public InvalidOrderStateException(OrderStatus from, OrderStatus to) {

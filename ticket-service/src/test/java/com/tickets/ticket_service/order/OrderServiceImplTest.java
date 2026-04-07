@@ -3,24 +3,27 @@ package com.tickets.ticket_service.order;
 import com.tickets.ticket_service.exception.InvalidOrderStateException;
 import com.tickets.ticket_service.exception.OrderNotFoundException;
 import com.tickets.ticket_service.exception.UnauthorizedActionException;
-import com.tickets.ticket_service.messaging.event.StockReservedEvent;
-import com.tickets.ticket_service.messaging.event.StockReservedItem;
-import com.tickets.ticket_service.messaging.publisher.OrderEventPublisher;
-import com.tickets.ticket_service.order.dto.CreateOrderItemRequest;
-import com.tickets.ticket_service.order.dto.CreateOrderRequest;
-import com.tickets.ticket_service.order.dto.OrderResponse;
-import com.tickets.ticket_service.ticket.TicketService;
+import com.tickets.ticket_service.order.application.CancelOrderUseCase;
+import com.tickets.ticket_service.order.application.ConfirmOrderUseCase;
+import com.tickets.ticket_service.order.application.CreateOrderUseCase;
+import com.tickets.ticket_service.order.application.FailOrderUseCase;
+import com.tickets.ticket_service.order.application.GetOrderByIdUseCase;
+import com.tickets.ticket_service.order.application.dto.CreateOrderCommand;
+import com.tickets.ticket_service.order.domain.Order;
+import com.tickets.ticket_service.order.domain.OrderEventPublisher;
+import com.tickets.ticket_service.order.domain.OrderItem;
+import com.tickets.ticket_service.order.domain.OrderRepository;
+import com.tickets.ticket_service.order.domain.OrderStatus;
+import com.tickets.ticket_service.order.domain.StockConfirmationItem;
+import com.tickets.ticket_service.ticket.application.GenerateTicketsUseCase;
+import com.tickets.ticket_service.ticket.application.dto.GeneratedTicketData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -35,83 +38,88 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("OrderServiceImpl")
+@DisplayName("Order UseCases")
 class OrderServiceImplTest {
 
     @Mock private OrderRepository orderRepository;
     @Mock private OrderEventPublisher eventPublisher;
-    @Mock private TicketService ticketService;
-
-    @InjectMocks
-    private OrderServiceImpl orderService;
+    @Mock private GenerateTicketsUseCase generateTickets;
 
     private UUID userId;
     private UUID orderId;
+    private UUID eventId;
     private Order pendingOrder;
-    private Authentication ownerAuth;
-    private Authentication otherAuth;
 
     @BeforeEach
     void setUp() {
         userId  = UUID.randomUUID();
         orderId = UUID.randomUUID();
+        eventId = UUID.randomUUID();
 
-        OrderItem item = new OrderItem();
-        item.setEventId(UUID.randomUUID());
-        item.setTicketTypeId(1L);
-        item.setQuantity(2);
-        item.setUnitPrice(BigDecimal.ZERO);
+        OrderItem item = OrderItem.create(eventId, 1L, 2);
+        item.setId(1L);
 
-        pendingOrder = new Order();
+        pendingOrder = Order.create(userId, "pm_test", List.of(item));
         pendingOrder.setId(orderId);
-        pendingOrder.setUserId(userId);
-        pendingOrder.setStatus(OrderStatus.PENDING);
-        pendingOrder.setTotalAmount(BigDecimal.ZERO);
-        pendingOrder.getItems().add(item);
-        item.setOrder(pendingOrder);
-
-        ownerAuth = auth(userId, "BUYER");
-        otherAuth = auth(UUID.randomUUID(), "BUYER");
     }
 
+    // ── CreateOrderUseCase ────────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("createOrder")
-    class CreateOrder {
+    @DisplayName("CreateOrderUseCase")
+    class CreateOrderTests {
+
+        private CreateOrderUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new CreateOrderUseCase(orderRepository, eventPublisher);
+        }
 
         @Test
         @DisplayName("debe crear orden PENDING y publicar StockReserveCommand")
         void shouldCreatePendingOrder_andPublishCommand() {
             given(orderRepository.save(any(Order.class))).willReturn(pendingOrder);
 
-            CreateOrderRequest request = buildCreateRequest();
-            OrderResponse response = orderService.createOrder(request, ownerAuth);
+            CreateOrderCommand command = new CreateOrderCommand(userId, "pm_test", List.of(
+                    new CreateOrderCommand.OrderItemData(eventId, 1L, 2)));
 
-            assertThat(response.getStatus()).isEqualTo(OrderStatus.PENDING);
-            then(eventPublisher).should().publishStockReserve(any());
+            Order result = useCase.execute(command);
+
+            assertThat(result.getStatus()).isEqualTo(OrderStatus.PENDING);
+            then(eventPublisher).should().publishStockReserve(any(), any(), any());
         }
     }
 
+    // ── ConfirmOrderUseCase ───────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("confirmOrder")
-    class ConfirmOrder {
+    @DisplayName("ConfirmOrderUseCase")
+    class ConfirmOrderTests {
+
+        private ConfirmOrderUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new ConfirmOrderUseCase(orderRepository, generateTickets, eventPublisher);
+        }
 
         @Test
         @DisplayName("debe confirmar la orden, actualizar precios y generar tickets")
         void shouldConfirmOrder_updatePrices_generateTickets() {
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
             given(orderRepository.save(any(Order.class))).willReturn(pendingOrder);
-            given(ticketService.generateTickets(any(Order.class))).willReturn(List.of());
+            given(generateTickets.execute(any())).willReturn(List.of(
+                    new GeneratedTicketData(UUID.randomUUID(), eventId, 1L, "QR123")));
 
-            StockReservedEvent event = new StockReservedEvent(orderId, List.of(
-                    new StockReservedItem(
-                            pendingOrder.getItems().get(0).getEventId(),
-                            1L, 2, new BigDecimal("150.00"))));
+            List<StockConfirmationItem> reserved = List.of(
+                    new StockConfirmationItem(eventId, 1L, 2, new BigDecimal("150.00")));
 
-            OrderResponse response = orderService.confirmOrder(event);
+            Order result = useCase.execute(orderId, reserved);
 
-            assertThat(response.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
-            then(ticketService).should().generateTickets(any(Order.class));
-            then(eventPublisher).should().publishOrderConfirmed(any());
+            assertThat(result.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+            then(generateTickets).should().execute(any());
+            then(eventPublisher).should().publishOrderConfirmed(any(), any(), any(), any(), any());
         }
 
         @Test
@@ -120,18 +128,34 @@ class OrderServiceImplTest {
             pendingOrder.setStatus(OrderStatus.CONFIRMED);
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
 
-            StockReservedEvent event = new StockReservedEvent(orderId, List.of());
-
-            assertThatThrownBy(() -> orderService.confirmOrder(event))
+            assertThatThrownBy(() -> useCase.execute(orderId, List.of()))
                     .isInstanceOf(InvalidOrderStateException.class);
 
-            then(ticketService).should(never()).generateTickets(any());
+            then(generateTickets).should(never()).execute(any());
+        }
+
+        @Test
+        @DisplayName("debe lanzar OrderNotFoundException si la orden no existe")
+        void shouldThrow_whenOrderNotFound() {
+            given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> useCase.execute(orderId, List.of()))
+                    .isInstanceOf(OrderNotFoundException.class);
         }
     }
 
+    // ── FailOrderUseCase ──────────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("failOrder")
-    class FailOrder {
+    @DisplayName("FailOrderUseCase")
+    class FailOrderTests {
+
+        private FailOrderUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new FailOrderUseCase(orderRepository, eventPublisher);
+        }
 
         @Test
         @DisplayName("debe marcar la orden como FAILED y publicar cancelación")
@@ -139,15 +163,24 @@ class OrderServiceImplTest {
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
             given(orderRepository.save(any(Order.class))).willReturn(pendingOrder);
 
-            orderService.failOrder(orderId, "Sin stock");
+            useCase.execute(orderId, "Sin stock");
 
-            then(eventPublisher).should().publishOrderCancelled(any());
+            then(eventPublisher).should().publishOrderCancelled(any(), any(), any());
         }
     }
 
+    // ── CancelOrderUseCase ────────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("cancelOrder")
-    class CancelOrder {
+    @DisplayName("CancelOrderUseCase")
+    class CancelOrderTests {
+
+        private CancelOrderUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new CancelOrderUseCase(orderRepository, eventPublisher);
+        }
 
         @Test
         @DisplayName("debe cancelar la orden cuando el requester es el dueño")
@@ -155,9 +188,21 @@ class OrderServiceImplTest {
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
             given(orderRepository.save(any(Order.class))).willReturn(pendingOrder);
 
-            orderService.cancelOrder(orderId, ownerAuth);
+            Order result = useCase.execute(orderId, userId, false);
 
-            then(eventPublisher).should().publishOrderCancelled(any());
+            assertThat(result.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+            then(eventPublisher).should().publishOrderCancelled(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("debe cancelar cuando el requester es admin aunque no sea el dueño")
+        void shouldCancel_whenAdmin() {
+            given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
+            given(orderRepository.save(any(Order.class))).willReturn(pendingOrder);
+
+            Order result = useCase.execute(orderId, UUID.randomUUID(), true);
+
+            assertThat(result.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         }
 
         @Test
@@ -165,7 +210,7 @@ class OrderServiceImplTest {
         void shouldThrow_whenNotOwner() {
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
 
-            assertThatThrownBy(() -> orderService.cancelOrder(orderId, otherAuth))
+            assertThatThrownBy(() -> useCase.execute(orderId, UUID.randomUUID(), false))
                     .isInstanceOf(UnauthorizedActionException.class);
 
             then(orderRepository).should(never()).save(any());
@@ -177,23 +222,32 @@ class OrderServiceImplTest {
             pendingOrder.setStatus(OrderStatus.CONFIRMED);
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
 
-            assertThatThrownBy(() -> orderService.cancelOrder(orderId, ownerAuth))
+            assertThatThrownBy(() -> useCase.execute(orderId, userId, false))
                     .isInstanceOf(InvalidOrderStateException.class);
         }
     }
 
+    // ── GetOrderByIdUseCase ───────────────────────────────────────────────────
+
     @Nested
-    @DisplayName("findById")
-    class FindById {
+    @DisplayName("GetOrderByIdUseCase")
+    class GetOrderByIdTests {
+
+        private GetOrderByIdUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new GetOrderByIdUseCase(orderRepository);
+        }
 
         @Test
         @DisplayName("debe retornar la orden cuando el dueño la consulta")
         void shouldReturn_whenOwner() {
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
 
-            OrderResponse response = orderService.findById(orderId, ownerAuth);
+            Order result = useCase.execute(orderId, userId, false);
 
-            assertThat(response.getId()).isEqualTo(orderId);
+            assertThat(result.getId()).isEqualTo(orderId);
         }
 
         @Test
@@ -201,27 +255,17 @@ class OrderServiceImplTest {
         void shouldThrow_whenNotFound() {
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> orderService.findById(orderId, ownerAuth))
+            assertThatThrownBy(() -> useCase.execute(orderId, userId, false))
                     .isInstanceOf(OrderNotFoundException.class);
         }
-    }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+        @Test
+        @DisplayName("debe lanzar UnauthorizedActionException si no es el dueño ni admin")
+        void shouldThrow_whenNotOwnerOrAdmin() {
+            given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
 
-    private Authentication auth(UUID id, String role) {
-        return new UsernamePasswordAuthenticationToken(
-                id.toString(), null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role)));
-    }
-
-    private CreateOrderRequest buildCreateRequest() {
-        CreateOrderItemRequest item = new CreateOrderItemRequest();
-        item.setEventId(UUID.randomUUID());
-        item.setTicketTypeId(1L);
-        item.setQuantity(2);
-
-        CreateOrderRequest req = new CreateOrderRequest();
-        req.setItems(List.of(item));
-        return req;
+            assertThatThrownBy(() -> useCase.execute(orderId, UUID.randomUUID(), false))
+                    .isInstanceOf(UnauthorizedActionException.class);
+        }
     }
 }

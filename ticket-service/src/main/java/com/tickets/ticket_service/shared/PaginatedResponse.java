@@ -1,9 +1,11 @@
 package com.tickets.ticket_service.shared;
 
-import org.springframework.data.domain.Page;
-
 import java.util.List;
 
+/**
+ * Wrapper genérico para respuestas paginadas HTTP.
+ * Construido desde PageResult<T> (dominio) — nunca desde Spring Data Page.
+ */
 public record PaginatedResponse<T>(
         List<T> content,
         int page,
@@ -12,14 +14,14 @@ public record PaginatedResponse<T>(
         int totalPages,
         boolean last
 ) {
-    public static <T> PaginatedResponse<T> from(Page<T> page) {
+    public static <T> PaginatedResponse<T> from(PageResult<T> result) {
         return new PaginatedResponse<>(
-                page.getContent(),
-                page.getNumber(),
-                page.getSize(),
-                page.getTotalElements(),
-                page.getTotalPages(),
-                page.isLast()
+                result.items(),
+                result.page(),
+                result.size(),
+                result.totalElements(),
+                result.totalPages(),
+                result.page() >= result.totalPages() - 1
         );
     }
 }

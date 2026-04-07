@@ -6,10 +6,13 @@ services:
     image: rabbitmq:3-management
     container_name: rabbitmq
     hostname: rabbitmq
+    user: "999"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
       RABBITMQ_ERLANG_COOKIE: "e4_backend_cookie"
+    tmpfs:
+      - /var/lib/rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
