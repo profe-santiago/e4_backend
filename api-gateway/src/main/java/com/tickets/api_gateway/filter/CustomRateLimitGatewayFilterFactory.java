@@ -4,14 +4,14 @@ import com.tickets.api_gateway.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
-import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -19,7 +19,7 @@ import java.util.Objects;
 
 @Slf4j
 @Component
-public class CustomRateLimitGatewayFilterFactory extends AbstractGatewayFilterFactory<CustomRateLimitGatewayFilterFactory.Config> {
+public class CustomRateLimitGatewayFilterFactory implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -44,16 +44,14 @@ public class CustomRateLimitGatewayFilterFactory extends AbstractGatewayFilterFa
 
     @Autowired
     public CustomRateLimitGatewayFilterFactory(JwtUtil jwtUtil, ReactiveStringRedisTemplate redisTemplate) {
-        super(Config.class);
         this.jwtUtil = jwtUtil;
         this.redisTemplate = redisTemplate;
     }
 
     @Override
-    public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> {
-            String requestPath = exchange.getRequest().getURI().getPath();
-            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String requestPath = exchange.getRequest().getURI().getPath();
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
             // Determine the key for rate limiting
             String rateLimitKey;
@@ -93,26 +91,30 @@ public class CustomRateLimitGatewayFilterFactory extends AbstractGatewayFilterFa
                 rateLimitKey = "rate_limit:ip:" + getClientIp(exchange);
             }
 
-            // Check rate limit using token bucket algorithm
-            return checkRateLimit(rateLimitKey, replenishRate, burstCapacity)
-                .flatMap(allowed -> {
-                    if (!allowed) {
-                        log.warn("Rate limit exceeded for key: {}", rateLimitKey);
-                        exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-                        exchange.getResponse().getHeaders().add("X-RateLimit-Retry-After-Seconds", "60");
-                        return exchange.getResponse().setComplete();
-                    }
+        // Check rate limit using token bucket algorithm
+        return checkRateLimit(rateLimitKey, replenishRate, burstCapacity)
+            .flatMap(allowed -> {
+                if (!allowed) {
+                    log.warn("Rate limit exceeded for key: {}", rateLimitKey);
+                    exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+                    exchange.getResponse().getHeaders().add("X-RateLimit-Retry-After-Seconds", "60");
+                    return exchange.getResponse().setComplete();
+                }
 
-                    // Add rate limit headers
-                    return getRemainingRequests(rateLimitKey, burstCapacity)
-                        .flatMap(remaining -> {
-                            exchange.getResponse().getHeaders().add("X-RateLimit-Limit", String.valueOf(burstCapacity));
-                            exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", String.valueOf(remaining));
-                            exchange.getResponse().getHeaders().add("X-RateLimit-Reset", String.valueOf(System.currentTimeMillis() / 1000 + 60));
-                            return chain.filter(exchange);
-                        });
-                });
-        };
+                // Add rate limit headers
+                return getRemainingRequests(rateLimitKey, burstCapacity)
+                    .flatMap(remaining -> {
+                        exchange.getResponse().getHeaders().add("X-RateLimit-Limit", String.valueOf(burstCapacity));
+                        exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", String.valueOf(remaining));
+                        exchange.getResponse().getHeaders().add("X-RateLimit-Reset", String.valueOf(System.currentTimeMillis() / 1000 + 60));
+                        return chain.filter(exchange);
+                    });
+            });
+    }
+
+    @Override
+    public int getOrder() {
+        return -1; // Execute before other filters
     }
 
     private String getClientIp(org.springframework.web.server.ServerWebExchange exchange) {
@@ -134,7 +136,7 @@ public class CustomRateLimitGatewayFilterFactory extends AbstractGatewayFilterFa
         long now = System.currentTimeMillis();
 
         return redisTemplate.opsForValue().get(tokensKey)
-            .defaultIfEmpty("0")
+            .defaultIfEmpty(String.valueOf(burstCapacity)) // Start with full burst capacity
             .zipWith(redisTemplate.opsForValue().get(timestampKey).defaultIfEmpty(String.valueOf(now)))
             .flatMap(tuple -> {
                 double tokens = Double.parseDouble(tuple.getT1());
@@ -165,9 +167,5 @@ public class CustomRateLimitGatewayFilterFactory extends AbstractGatewayFilterFa
         return redisTemplate.opsForValue().get(tokensKey)
             .defaultIfEmpty(String.valueOf(burstCapacity))
             .map(tokens -> (int) Math.floor(Double.parseDouble(tokens)));
-    }
-
-    public static class Config {
-        // Configuration properties if needed
     }
 }
