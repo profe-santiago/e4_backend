@@ -11,7 +11,7 @@ build/
 
 # Variables de entorno
 .env
-
+.env.example
 # IntelliJ
 .idea/
 *.iml
@@ -27,3 +27,5 @@ logs/
 
 # Maven
 target/
+
+.claude
