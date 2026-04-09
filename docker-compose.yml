@@ -24,6 +24,23 @@ services:
     networks:
       - tickets-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+    command: redis-server --appendonly yes
+
   auth-db:
     image: postgres:16
     container_name: auth_db
@@ -140,15 +157,55 @@ services:
 
   # ── Microservicios ───────────────────────────────────────────────────────────
 
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: 8090
+      USER_SERVICE_HOST: user-service
+      USER_SERVICE_PORT: 8081
+      EVENT_SERVICE_HOST: event-service
+      EVENT_SERVICE_PORT: 8082
+      TICKET_SERVICE_HOST: ticket-service
+      TICKET_SERVICE_PORT: 8083
+      PAYMENT_SERVICE_HOST: payment-service
+      PAYMENT_SERVICE_PORT: 8084
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      event-service:
+        condition: service_started
+      ticket-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+    networks:
+      - tickets-network
+    restart: on-failure
+
   auth-service:
     build:
       context: ./auth-service
       dockerfile: Dockerfile
     container_name: auth_service
     ports:
-      - "8080:8080"
+      - "8090:8090"  # Only exposed for debugging, use gateway instead
     environment:
-      SERVER_PORT: 8080
+      SERVER_PORT: 8090
       DB_HOST: auth-db
       DB_PORT: 5432
       DB_NAME: auth_db
@@ -331,6 +388,7 @@ volumes:
   ticket-db-data:
   payment-db-data:
   notification-db-data:
+  redis-data:
 
 # ── Red compartida ─────────────────────────────────────────────────────────────
 
