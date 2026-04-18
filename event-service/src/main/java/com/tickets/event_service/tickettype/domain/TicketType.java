@@ -48,6 +48,14 @@ public class TicketType {
     }
 
     /**
+     * Libera stock reservado cuando una orden es cancelada o reembolsada.
+     * No puede superar totalQuantity (garantía de integridad).
+     */
+    public void releaseStock(int quantity) {
+        this.availableQuantity = Math.min(this.totalQuantity, this.availableQuantity + quantity);
+    }
+
+    /**
      * Actualiza los detalles del tipo de ticket.
      * Resetea el availableQuantity al nuevo totalQuantity.
      */

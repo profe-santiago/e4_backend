@@ -22,4 +22,13 @@ public interface PaymentGateway {
      * @return resultado del cobro — nunca lanza excepción; los errores quedan en {@code failureReason}
      */
     PaymentChargeResult charge(Money amount, String paymentMethodId, OrderId orderId);
+
+    /**
+     * Reembolsa un pago previamente aprobado.
+     *
+     * @param transactionId ID del PaymentIntent de Stripe a reembolsar
+     * @param orderId       identificador de la orden; se usa como clave de idempotencia del refund
+     * @return resultado del reembolso — nunca lanza excepción; los errores quedan en {@code failureReason}
+     */
+    PaymentChargeResult refund(String transactionId, OrderId orderId);
 }

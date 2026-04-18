@@ -85,6 +85,15 @@ public class Order {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /** Reembolso aprobado. Solo órdenes CONFIRMED pueden reembolsarse. */
+    public void refund() {
+        if (!status.canTransitionTo(OrderStatus.REFUNDED)) {
+            throw new InvalidOrderStateException(status, OrderStatus.REFUNDED);
+        }
+        this.status = OrderStatus.REFUNDED;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // ─── Getters ─────────────────────────────────────────────────────────
 
     public UUID getId() { return id; }

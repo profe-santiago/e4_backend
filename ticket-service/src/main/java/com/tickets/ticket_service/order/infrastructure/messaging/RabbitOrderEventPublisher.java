@@ -3,6 +3,9 @@ package com.tickets.ticket_service.order.infrastructure.messaging;
 import com.tickets.ticket_service.order.domain.OrderEventPublisher;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderCancelledEvent;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderConfirmedEvent;
+import com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderRefundedEvent;
+import com.tickets.ticket_service.order.infrastructure.messaging.dto.RefundInitiatedEvent;
+import com.tickets.ticket_service.order.infrastructure.messaging.dto.ReleaseStockItem;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.StockReserveCommand;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.StockReserveItem;
 import org.slf4j.Logger;
@@ -38,6 +41,12 @@ public class RabbitOrderEventPublisher implements OrderEventPublisher {
     @Value("${app.rabbitmq.routing-keys.order-cancelled}")
     private String rkOrderCancelled;
 
+    @Value("${app.rabbitmq.routing-keys.refund-initiated}")
+    private String rkRefundInitiated;
+
+    @Value("${app.rabbitmq.routing-keys.order-refunded}")
+    private String rkOrderRefunded;
+
     public RabbitOrderEventPublisher(RabbitTemplate rabbitTemplate) {
         this.rabbitTemplate = rabbitTemplate;
     }
@@ -66,9 +75,29 @@ public class RabbitOrderEventPublisher implements OrderEventPublisher {
     }
 
     @Override
-    public void publishOrderCancelled(UUID orderId, UUID userId, String reason) {
-        OrderCancelledEvent event = new OrderCancelledEvent(orderId, userId, reason);
+    public void publishOrderCancelled(UUID orderId, UUID userId, String reason, List<StockReleaseItem> items) {
+        List<ReleaseStockItem> dtoItems = items.stream()
+                .map(i -> new ReleaseStockItem(i.eventId(), i.ticketTypeId(), i.quantity()))
+                .toList();
+        OrderCancelledEvent event = new OrderCancelledEvent(orderId, userId, reason, dtoItems);
         log.info("[PUBLISH] order.cancelled → orderId={}, reason={}", orderId, reason);
         rabbitTemplate.convertAndSend(exchange, rkOrderCancelled, event);
+    }
+
+    @Override
+    public void publishRefundInitiated(UUID orderId, UUID userId) {
+        RefundInitiatedEvent event = new RefundInitiatedEvent(orderId, userId);
+        log.info("[PUBLISH] refund.initiated → orderId={}", orderId);
+        rabbitTemplate.convertAndSend(exchange, rkRefundInitiated, event);
+    }
+
+    @Override
+    public void publishOrderRefunded(UUID orderId, UUID userId, List<StockReleaseItem> items) {
+        List<ReleaseStockItem> dtoItems = items.stream()
+                .map(i -> new ReleaseStockItem(i.eventId(), i.ticketTypeId(), i.quantity()))
+                .toList();
+        OrderRefundedEvent event = new OrderRefundedEvent(orderId, userId, dtoItems);
+        log.info("[PUBLISH] order.refunded → orderId={}", orderId);
+        rabbitTemplate.convertAndSend(exchange, rkOrderRefunded, event);
     }
 }

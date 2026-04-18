@@ -5,6 +5,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.OrderConfirmedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentCompletedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentFailedEvent;
+import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundCompletedEvent;
+import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundInitiatedEvent;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -36,9 +38,12 @@ public class RabbitMQConfig {
     @Value("${app.rabbitmq.exchange}") private String exchange;
     @Value("${app.rabbitmq.dlx}")      private String dlx;
 
-    @Value("${app.rabbitmq.queues.order-confirmed}") private String orderConfirmedQueue;
+    @Value("${app.rabbitmq.queues.order-confirmed}")  private String orderConfirmedQueue;
+    @Value("${app.rabbitmq.queues.refund-initiated}") private String refundInitiatedQueue;
 
     @Value("${app.rabbitmq.routing-keys.order-confirmed}")   private String rkOrderConfirmed;
+    @Value("${app.rabbitmq.routing-keys.refund-initiated}")  private String rkRefundInitiated;
+    @Value("${app.rabbitmq.routing-keys.refund-completed}")  private String rkRefundCompleted;
 
     // ── Exchanges ─────────────────────────────────────────────────────────────
 
@@ -62,11 +67,24 @@ public class RabbitMQConfig {
                 .build();
     }
 
+    @Bean
+    public Queue refundInitiatedQueue() {
+        return QueueBuilder.durable(refundInitiatedQueue)
+                .withArgument("x-dead-letter-exchange", dlx)
+                .withArgument("x-dead-letter-routing-key", refundInitiatedQueue + ".dlq")
+                .build();
+    }
+
     // ── Dead Letter Queues ────────────────────────────────────────────────────
 
     @Bean
     public Queue orderConfirmedDlq() {
         return QueueBuilder.durable(orderConfirmedQueue + ".dlq").build();
+    }
+
+    @Bean
+    public Queue refundInitiatedDlq() {
+        return QueueBuilder.durable(refundInitiatedQueue + ".dlq").build();
     }
 
     // ── Bindings ──────────────────────────────────────────────────────────────
@@ -80,6 +98,17 @@ public class RabbitMQConfig {
     public Binding orderConfirmedDlqBinding() {
         return BindingBuilder.bind(orderConfirmedDlq()).to(deadLetterExchange())
                 .with(orderConfirmedQueue + ".dlq");
+    }
+
+    @Bean
+    public Binding refundInitiatedBinding() {
+        return BindingBuilder.bind(refundInitiatedQueue()).to(ticketsExchange()).with(rkRefundInitiated);
+    }
+
+    @Bean
+    public Binding refundInitiatedDlqBinding() {
+        return BindingBuilder.bind(refundInitiatedDlq()).to(deadLetterExchange())
+                .with(refundInitiatedQueue + ".dlq");
     }
 
     // ── Serialización: Jackson con type aliases (cross-service safe) ──────────
@@ -115,6 +144,8 @@ public class RabbitMQConfig {
         mappings.put("OrderConfirmedEvent",   OrderConfirmedEvent.class);
         mappings.put("PaymentCompletedEvent", PaymentCompletedEvent.class);
         mappings.put("PaymentFailedEvent",    PaymentFailedEvent.class);
+        mappings.put("RefundInitiatedEvent",  RefundInitiatedEvent.class);
+        mappings.put("RefundCompletedEvent",  RefundCompletedEvent.class);
         return mappings;
     }
 }

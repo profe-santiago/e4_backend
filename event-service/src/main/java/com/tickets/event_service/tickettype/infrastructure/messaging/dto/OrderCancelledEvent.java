@@ -1,4 +1,4 @@
-package com.tickets.ticket_service.order.infrastructure.messaging.dto;
+package com.tickets.event_service.tickettype.infrastructure.messaging.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * ticket-service publica esto cuando una orden es cancelada o falla.
- * event-service consume esto para liberar el stock.
+ * Evento publicado por ticket-service cuando una orden es cancelada o falla.
+ * event-service consume esto para liberar el stock reservado.
  * Type alias RabbitMQ: "OrderCancelledEvent"
  */
 @Data

@@ -4,6 +4,7 @@ import com.tickets.ticket_service.order.application.CancelOrderUseCase;
 import com.tickets.ticket_service.order.application.CreateOrderUseCase;
 import com.tickets.ticket_service.order.application.GetOrderByIdUseCase;
 import com.tickets.ticket_service.order.application.ListMyOrdersUseCase;
+import com.tickets.ticket_service.order.application.RequestRefundUseCase;
 import com.tickets.ticket_service.order.infrastructure.rest.dto.CreateOrderRequest;
 import com.tickets.ticket_service.order.infrastructure.rest.dto.OrderResponse;
 import com.tickets.ticket_service.shared.PaginatedResponse;
@@ -28,17 +29,20 @@ public class OrderController {
     private final GetOrderByIdUseCase getOrderById;
     private final ListMyOrdersUseCase listMyOrders;
     private final CancelOrderUseCase cancelOrder;
+    private final RequestRefundUseCase requestRefund;
     private final OrderRestMapper mapper;
 
     public OrderController(CreateOrderUseCase createOrder,
                             GetOrderByIdUseCase getOrderById,
                             ListMyOrdersUseCase listMyOrders,
                             CancelOrderUseCase cancelOrder,
+                            RequestRefundUseCase requestRefund,
                             OrderRestMapper mapper) {
         this.createOrder = createOrder;
         this.getOrderById = getOrderById;
         this.listMyOrders = listMyOrders;
         this.cancelOrder = cancelOrder;
+        this.requestRefund = requestRefund;
         this.mapper = mapper;
     }
 
@@ -76,5 +80,14 @@ public class OrderController {
         UUID userId = SecurityUtils.getUserId(auth);
         boolean isAdmin = SecurityUtils.isAdmin(auth);
         return mapper.toResponse(cancelOrder.execute(id, userId, isAdmin));
+    }
+
+    @PatchMapping("/{id}/refund")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(summary = "Solicitar reembolso (solo si está en CONFIRMED) — proceso asíncrono")
+    public OrderResponse refund(@PathVariable UUID id, Authentication auth) {
+        UUID userId = SecurityUtils.getUserId(auth);
+        boolean isAdmin = SecurityUtils.isAdmin(auth);
+        return mapper.toResponse(requestRefund.execute(id, userId, isAdmin));
     }
 }

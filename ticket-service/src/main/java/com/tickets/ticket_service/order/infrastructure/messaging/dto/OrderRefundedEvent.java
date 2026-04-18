@@ -8,16 +8,15 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * ticket-service publica esto cuando una orden es cancelada o falla.
- * event-service consume esto para liberar el stock.
- * Type alias RabbitMQ: "OrderCancelledEvent"
+ * ticket-service publica esto cuando la orden transicionó a REFUNDED.
+ * event-service consume esto para restituir el stock.
+ * Type alias RabbitMQ: "OrderRefundedEvent"
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderCancelledEvent {
+public class OrderRefundedEvent {
     private UUID orderId;
     private UUID userId;
-    private String reason;
     private List<ReleaseStockItem> items;
 }

@@ -90,6 +90,19 @@ public class Payment {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * Marca el pago como reembolsado luego de que Stripe confirmó el refund.
+     * Solo pagos APPROVED pueden reembolsarse.
+     */
+    public void refund() {
+        if (this.status != PaymentStatus.APPROVED) {
+            throw new IllegalStateException(
+                    "Cannot refund payment in status %s — only APPROVED payments can be refunded".formatted(status));
+        }
+        this.status = PaymentStatus.REFUNDED;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // ── Getters (sin setters: las transiciones van por métodos de dominio) ───
 
     public PaymentId getId() {

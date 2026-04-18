@@ -2,6 +2,8 @@ package com.tickets.event_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.tickets.event_service.tickettype.infrastructure.messaging.dto.OrderCancelledEvent;
+import com.tickets.event_service.tickettype.infrastructure.messaging.dto.OrderRefundedEvent;
 import com.tickets.event_service.tickettype.infrastructure.messaging.dto.StockFailedEvent;
 import com.tickets.event_service.tickettype.infrastructure.messaging.dto.StockReserveCommand;
 import com.tickets.event_service.tickettype.infrastructure.messaging.dto.StockReservedEvent;
@@ -25,12 +27,16 @@ import java.util.Map;
 @Configuration
 public class RabbitMQConfig {
 
-    @Value("${app.rabbitmq.exchange}")               private String exchange;
-    @Value("${app.rabbitmq.dlx}")                    private String dlx;
-    @Value("${app.rabbitmq.queues.stock-reserve}")   private String stockReserveQueue;
+    @Value("${app.rabbitmq.exchange}")                    private String exchange;
+    @Value("${app.rabbitmq.dlx}")                         private String dlx;
+    @Value("${app.rabbitmq.queues.stock-reserve}")        private String stockReserveQueue;
+    @Value("${app.rabbitmq.queues.order-cancelled}")      private String orderCancelledQueue;
+    @Value("${app.rabbitmq.queues.order-refunded}")       private String orderRefundedQueue;
     @Value("${app.rabbitmq.routing-keys.stock-reserve}")  private String rkStockReserve;
     @Value("${app.rabbitmq.routing-keys.stock-reserved}") private String rkStockReserved;
     @Value("${app.rabbitmq.routing-keys.stock-failed}")   private String rkStockFailed;
+    @Value("${app.rabbitmq.routing-keys.order-cancelled}") private String rkOrderCancelled;
+    @Value("${app.rabbitmq.routing-keys.order-refunded}")  private String rkOrderRefunded;
 
     @Bean
     public TopicExchange ticketsExchange() {
@@ -56,6 +62,32 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue orderCancelledQueue() {
+        return QueueBuilder.durable(orderCancelledQueue)
+                .withArgument("x-dead-letter-exchange", dlx)
+                .withArgument("x-dead-letter-routing-key", orderCancelledQueue + ".dlq")
+                .build();
+    }
+
+    @Bean
+    public Queue orderCancelledDlq() {
+        return QueueBuilder.durable(orderCancelledQueue + ".dlq").build();
+    }
+
+    @Bean
+    public Queue orderRefundedQueue() {
+        return QueueBuilder.durable(orderRefundedQueue)
+                .withArgument("x-dead-letter-exchange", dlx)
+                .withArgument("x-dead-letter-routing-key", orderRefundedQueue + ".dlq")
+                .build();
+    }
+
+    @Bean
+    public Queue orderRefundedDlq() {
+        return QueueBuilder.durable(orderRefundedQueue + ".dlq").build();
+    }
+
+    @Bean
     public Binding stockReserveBinding() {
         return BindingBuilder.bind(stockReserveQueue()).to(ticketsExchange()).with(rkStockReserve);
     }
@@ -64,6 +96,28 @@ public class RabbitMQConfig {
     public Binding stockReserveDlqBinding() {
         return BindingBuilder.bind(stockReserveDlq()).to(deadLetterExchange())
                 .with(stockReserveQueue + ".dlq");
+    }
+
+    @Bean
+    public Binding orderCancelledBinding() {
+        return BindingBuilder.bind(orderCancelledQueue()).to(ticketsExchange()).with(rkOrderCancelled);
+    }
+
+    @Bean
+    public Binding orderCancelledDlqBinding() {
+        return BindingBuilder.bind(orderCancelledDlq()).to(deadLetterExchange())
+                .with(orderCancelledQueue + ".dlq");
+    }
+
+    @Bean
+    public Binding orderRefundedBinding() {
+        return BindingBuilder.bind(orderRefundedQueue()).to(ticketsExchange()).with(rkOrderRefunded);
+    }
+
+    @Bean
+    public Binding orderRefundedDlqBinding() {
+        return BindingBuilder.bind(orderRefundedDlq()).to(deadLetterExchange())
+                .with(orderRefundedQueue + ".dlq");
     }
 
     @Bean
@@ -90,9 +144,11 @@ public class RabbitMQConfig {
 
     private Map<String, Class<?>> typeIdMappings() {
         Map<String, Class<?>> mappings = new HashMap<>();
-        mappings.put("StockReserveCommand", StockReserveCommand.class);
-        mappings.put("StockReservedEvent",  StockReservedEvent.class);
-        mappings.put("StockFailedEvent",    StockFailedEvent.class);
+        mappings.put("StockReserveCommand",  StockReserveCommand.class);
+        mappings.put("StockReservedEvent",   StockReservedEvent.class);
+        mappings.put("StockFailedEvent",     StockFailedEvent.class);
+        mappings.put("OrderCancelledEvent",  OrderCancelledEvent.class);
+        mappings.put("OrderRefundedEvent",   OrderRefundedEvent.class);
         return mappings;
     }
 }
