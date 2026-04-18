@@ -127,7 +127,7 @@ public class RabbitMQConfig {
         mapper.findAndRegisterModules();
 
         DefaultClassMapper classMapper = new DefaultClassMapper();
-        classMapper.setTrustedPackages("com.tickets.*");
+        classMapper.setTrustedPackages("*");
         classMapper.setIdClassMapping(typeIdMappings());
 
         Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(mapper);
@@ -144,11 +144,16 @@ public class RabbitMQConfig {
 
     private Map<String, Class<?>> typeIdMappings() {
         Map<String, Class<?>> mappings = new HashMap<>();
+        // Aliases (usado cuando el sender también tiene alias configurado)
         mappings.put("StockReserveCommand",  StockReserveCommand.class);
         mappings.put("StockReservedEvent",   StockReservedEvent.class);
         mappings.put("StockFailedEvent",     StockFailedEvent.class);
         mappings.put("OrderCancelledEvent",  OrderCancelledEvent.class);
         mappings.put("OrderRefundedEvent",   OrderRefundedEvent.class);
+        // FQCNs de ticket-service (fallback cuando Spring AMQP envía el FQCN en lugar del alias)
+        mappings.put("com.tickets.ticket_service.order.infrastructure.messaging.dto.StockReserveCommand",  StockReserveCommand.class);
+        mappings.put("com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderCancelledEvent",  OrderCancelledEvent.class);
+        mappings.put("com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderRefundedEvent",   OrderRefundedEvent.class);
         return mappings;
     }
 }

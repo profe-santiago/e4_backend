@@ -28,7 +28,10 @@ class JpaPaymentRepositoryAdapter implements PaymentRepository {
 
     @Override
     public Payment save(Payment payment) {
-        PaymentJpaEntity saved = jpaRepository.save(mapper.toJpaEntity(payment));
+        PaymentJpaEntity entity = mapper.toJpaEntity(payment);
+        // Tell Spring Data JPA whether to INSERT (persist) or UPDATE (merge)
+        entity.setIsNew(!jpaRepository.existsById(entity.getId()));
+        PaymentJpaEntity saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }
 

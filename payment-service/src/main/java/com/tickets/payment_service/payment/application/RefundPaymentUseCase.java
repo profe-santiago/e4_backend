@@ -49,6 +49,12 @@ public class RefundPaymentUseCase {
                 .orElseThrow(() -> new PaymentNotFoundException(
                         "Payment not found for order: " + orderId));
 
+        // Idempotencia: si ya fue reembolsado, no repetir
+        if (payment.getStatus() == PaymentStatus.REFUNDED) {
+            log.warn("[UC] RefundPayment — pago ya REFUNDED, ignorando (idempotencia): orderId={}", orderId);
+            return;
+        }
+
         if (payment.getStatus() != PaymentStatus.APPROVED) {
             log.warn("[UC] RefundPayment — pago no está en APPROVED: orderId={}, status={}",
                     orderId, payment.getStatus());

@@ -193,7 +193,7 @@ public class RabbitMQConfig {
         mapper.findAndRegisterModules();
 
         DefaultClassMapper classMapper = new DefaultClassMapper();
-        classMapper.setTrustedPackages("com.tickets.*");
+        classMapper.setTrustedPackages("*");
         classMapper.setIdClassMapping(typeIdMappings());
 
         Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(mapper);
@@ -215,6 +215,7 @@ public class RabbitMQConfig {
      */
     private Map<String, Class<?>> typeIdMappings() {
         Map<String, Class<?>> mappings = new HashMap<>();
+        // Aliases
         mappings.put("StockReserveCommand",    StockReserveCommand.class);
         mappings.put("StockReservedEvent",     StockReservedEvent.class);
         mappings.put("StockFailedEvent",       StockFailedEvent.class);
@@ -225,6 +226,13 @@ public class RabbitMQConfig {
         mappings.put("PaymentCompletedEvent",  PaymentCompletedEvent.class);
         mappings.put("RefundInitiatedEvent",   RefundInitiatedEvent.class);
         mappings.put("RefundCompletedEvent",   RefundCompletedEvent.class);
+        // FQCNs de event-service (fallback cuando Spring AMQP envía FQCN en lugar de alias)
+        mappings.put("com.tickets.event_service.tickettype.infrastructure.messaging.dto.StockReservedEvent", StockReservedEvent.class);
+        mappings.put("com.tickets.event_service.tickettype.infrastructure.messaging.dto.StockFailedEvent",   StockFailedEvent.class);
+        // FQCNs de payment-service
+        mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentCompletedEvent", PaymentCompletedEvent.class);
+        mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentFailedEvent",    PaymentFailedEvent.class);
+        mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.RefundCompletedEvent",  RefundCompletedEvent.class);
         return mappings;
     }
 }

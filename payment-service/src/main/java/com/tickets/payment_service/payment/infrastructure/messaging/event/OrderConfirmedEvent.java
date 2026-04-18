@@ -31,7 +31,7 @@ public class OrderConfirmedEvent {
     public static class ConfirmedTicket {
         private UUID ticketId;
         private UUID eventId;
-        private UUID ticketTypeId;
+        private Long ticketTypeId;
         private String qrCode;
     }
 }

@@ -207,7 +207,7 @@ services:
     environment:
       SERVER_PORT: 8090
       DB_HOST: auth-db
-      DB_PORT: 5432
+      DB_PORT: 5432 # Quitar puertos de BD  en producción
       DB_NAME: auth_db
       DB_USER: testuser
       DB_PASSWORD: testuser
