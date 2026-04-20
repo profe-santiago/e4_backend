@@ -58,6 +58,20 @@ class JavaMailEmailGateway implements NotificationEmailPort {
         sendHtml(recipientEmail, subject, html);
     }
 
+    @Override
+    public void sendRefundCompleted(String recipientEmail, String firstName, UUID orderId) {
+        String subject = "Tu reembolso fue procesado - Orden #" + orderId;
+        String html = templateBuilder.refundCompleted(firstName, orderId);
+        sendHtml(recipientEmail, subject, html);
+    }
+
+    @Override
+    public void sendRefundFailed(String recipientEmail, String firstName, UUID orderId, String reason) {
+        String subject = "No pudimos procesar tu reembolso - Orden #" + orderId;
+        String html = templateBuilder.refundFailed(firstName, orderId, reason);
+        sendHtml(recipientEmail, subject, html);
+    }
+
     private void sendHtml(String to, String subject, String html) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

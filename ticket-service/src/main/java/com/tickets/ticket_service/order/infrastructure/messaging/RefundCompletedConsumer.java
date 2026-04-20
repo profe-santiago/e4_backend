@@ -5,6 +5,8 @@ import com.tickets.ticket_service.order.domain.Order;
 import com.tickets.ticket_service.order.domain.OrderEventPublisher;
 import com.tickets.ticket_service.order.domain.OrderRepository;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.RefundCompletedEvent;
+import com.tickets.ticket_service.ticket.domain.Ticket;
+import com.tickets.ticket_service.ticket.domain.TicketRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -25,11 +27,14 @@ public class RefundCompletedConsumer {
 
     private final OrderRepository orderRepository;
     private final OrderEventPublisher eventPublisher;
+    private final TicketRepository ticketRepository;
 
     public RefundCompletedConsumer(OrderRepository orderRepository,
-                                   OrderEventPublisher eventPublisher) {
+                                   OrderEventPublisher eventPublisher,
+                                   TicketRepository ticketRepository) {
         this.orderRepository = orderRepository;
         this.eventPublisher = eventPublisher;
+        this.ticketRepository = ticketRepository;
     }
 
     @RabbitListener(queues = "${app.rabbitmq.queues.refund-completed}")
@@ -41,6 +46,13 @@ public class RefundCompletedConsumer {
 
         order.refund();
         Order saved = orderRepository.save(order);
+
+        List<Ticket> tickets = ticketRepository.findAllByOrderId(saved.getId());
+        tickets.forEach(t -> {
+            t.cancel();
+            ticketRepository.save(t);
+        });
+        log.info("[CONSUME] {} ticket(s) cancelados por reembolso → orderId={}", tickets.size(), saved.getId());
 
         List<OrderEventPublisher.StockReleaseItem> stockItems = saved.getItems().stream()
                 .map(i -> new OrderEventPublisher.StockReleaseItem(

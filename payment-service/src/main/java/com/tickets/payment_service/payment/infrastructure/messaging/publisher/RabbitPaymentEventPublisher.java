@@ -7,6 +7,7 @@ import com.tickets.payment_service.payment.domain.port.PaymentEventPort;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentCompletedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentFailedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundCompletedEvent;
+import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundFailedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -29,17 +30,20 @@ class RabbitPaymentEventPublisher implements PaymentEventPort {
     private final String rkPaymentCompleted;
     private final String rkPaymentFailed;
     private final String rkRefundCompleted;
+    private final String rkRefundFailed;
 
     RabbitPaymentEventPublisher(RabbitTemplate rabbitTemplate,
                                 @Value("${app.rabbitmq.exchange}") String exchange,
                                 @Value("${app.rabbitmq.routing-keys.payment-completed}") String rkPaymentCompleted,
                                 @Value("${app.rabbitmq.routing-keys.payment-failed}") String rkPaymentFailed,
-                                @Value("${app.rabbitmq.routing-keys.refund-completed}") String rkRefundCompleted) {
+                                @Value("${app.rabbitmq.routing-keys.refund-completed}") String rkRefundCompleted,
+                                @Value("${app.rabbitmq.routing-keys.refund-failed}") String rkRefundFailed) {
         this.rabbitTemplate = rabbitTemplate;
         this.exchange = exchange;
         this.rkPaymentCompleted = rkPaymentCompleted;
         this.rkPaymentFailed = rkPaymentFailed;
         this.rkRefundCompleted = rkRefundCompleted;
+        this.rkRefundFailed = rkRefundFailed;
     }
 
     @Override
@@ -74,8 +78,8 @@ class RabbitPaymentEventPublisher implements PaymentEventPort {
 
     @Override
     public void publishRefundFailed(OrderId orderId, UserId userId, String reason) {
-        log.warn("[RMQ] Refund failed — orderId={}, reason={}", orderId.value(), reason);
-        // No se publica evento de fallo hacia ticket-service en esta versión:
-        // la orden permanece en CONFIRMED y el usuario puede reintentar el reembolso.
+        RefundFailedEvent event = new RefundFailedEvent(orderId.value(), userId.value(), reason);
+        log.warn("[RMQ] Publishing RefundFailedEvent: orderId={}, reason={}", orderId.value(), reason);
+        rabbitTemplate.convertAndSend(exchange, rkRefundFailed, event);
     }
 }

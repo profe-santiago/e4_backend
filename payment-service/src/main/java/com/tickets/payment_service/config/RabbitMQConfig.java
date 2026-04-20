@@ -6,6 +6,7 @@ import com.tickets.payment_service.payment.infrastructure.messaging.event.OrderC
 import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentCompletedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentFailedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundCompletedEvent;
+import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundFailedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundInitiatedEvent;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
@@ -174,6 +175,7 @@ public class RabbitMQConfig {
         mappings.put("PaymentFailedEvent",    PaymentFailedEvent.class);
         mappings.put("RefundInitiatedEvent",  RefundInitiatedEvent.class);
         mappings.put("RefundCompletedEvent",  RefundCompletedEvent.class);
+        mappings.put("RefundFailedEvent",     RefundFailedEvent.class);
         // FQCNs de ticket-service (fallback cuando Spring AMQP envía FQCN en lugar de alias)
         mappings.put("com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderConfirmedEvent", OrderConfirmedEvent.class);
         mappings.put("com.tickets.ticket_service.order.infrastructure.messaging.dto.RefundInitiatedEvent", RefundInitiatedEvent.class);

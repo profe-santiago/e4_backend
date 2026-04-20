@@ -2,6 +2,8 @@ package com.tickets.ticket_service.order.domain;
 
 import com.tickets.ticket_service.shared.PageResult;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +21,8 @@ public interface OrderRepository {
     Optional<Order> findByIdWithItems(UUID id);
 
     PageResult<Order> findByUserId(UUID userId, int page, int size);
+
+    List<Order> findExpiredPendingOrders(LocalDateTime expirationThreshold);
 
     Order save(Order order);
 }

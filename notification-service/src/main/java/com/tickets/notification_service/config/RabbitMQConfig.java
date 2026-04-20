@@ -5,6 +5,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.tickets.notification_service.notification.infrastructure.messaging.event.OrderCancelledEvent;
 import com.tickets.notification_service.notification.infrastructure.messaging.event.OrderConfirmedEvent;
 import com.tickets.notification_service.notification.infrastructure.messaging.event.PaymentCompletedEvent;
+import com.tickets.notification_service.notification.infrastructure.messaging.event.RefundCompletedEvent;
+import com.tickets.notification_service.notification.infrastructure.messaging.event.RefundFailedEvent;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -39,10 +41,14 @@ public class RabbitMQConfig {
     @Value("${app.rabbitmq.queues.order-confirmed}")   private String orderConfirmedQueue;
     @Value("${app.rabbitmq.queues.payment-completed}") private String paymentCompletedQueue;
     @Value("${app.rabbitmq.queues.order-cancelled}")   private String orderCancelledQueue;
+    @Value("${app.rabbitmq.queues.refund-completed}")  private String refundCompletedQueue;
+    @Value("${app.rabbitmq.queues.refund-failed}")     private String refundFailedQueue;
 
     @Value("${app.rabbitmq.routing-keys.order-confirmed}")   private String rkOrderConfirmed;
     @Value("${app.rabbitmq.routing-keys.payment-completed}") private String rkPaymentCompleted;
     @Value("${app.rabbitmq.routing-keys.order-cancelled}")   private String rkOrderCancelled;
+    @Value("${app.rabbitmq.routing-keys.refund-completed}")  private String rkRefundCompleted;
+    @Value("${app.rabbitmq.routing-keys.refund-failed}")     private String rkRefundFailed;
 
     // ── Exchanges ─────────────────────────────────────────────────────────────
 
@@ -73,6 +79,16 @@ public class RabbitMQConfig {
         return withDlq(orderCancelledQueue);
     }
 
+    @Bean
+    public Queue refundCompletedNotificationQueue() {
+        return withDlq(refundCompletedQueue);
+    }
+
+    @Bean
+    public Queue refundFailedNotificationQueue() {
+        return withDlq(refundFailedQueue);
+    }
+
     // ── Dead Letter Queues ────────────────────────────────────────────────────
 
     @Bean
@@ -88,6 +104,16 @@ public class RabbitMQConfig {
     @Bean
     public Queue orderCancelledNotificationDlq() {
         return QueueBuilder.durable(orderCancelledQueue + ".dlq").build();
+    }
+
+    @Bean
+    public Queue refundCompletedNotificationDlq() {
+        return QueueBuilder.durable(refundCompletedQueue + ".dlq").build();
+    }
+
+    @Bean
+    public Queue refundFailedNotificationDlq() {
+        return QueueBuilder.durable(refundFailedQueue + ".dlq").build();
     }
 
     // ── Bindings ──────────────────────────────────────────────────────────────
@@ -128,6 +154,30 @@ public class RabbitMQConfig {
                 .to(deadLetterExchange()).with(orderCancelledQueue + ".dlq");
     }
 
+    @Bean
+    public Binding refundCompletedBinding() {
+        return BindingBuilder.bind(refundCompletedNotificationQueue())
+                .to(ticketsExchange()).with(rkRefundCompleted);
+    }
+
+    @Bean
+    public Binding refundCompletedDlqBinding() {
+        return BindingBuilder.bind(refundCompletedNotificationDlq())
+                .to(deadLetterExchange()).with(refundCompletedQueue + ".dlq");
+    }
+
+    @Bean
+    public Binding refundFailedBinding() {
+        return BindingBuilder.bind(refundFailedNotificationQueue())
+                .to(ticketsExchange()).with(rkRefundFailed);
+    }
+
+    @Bean
+    public Binding refundFailedDlqBinding() {
+        return BindingBuilder.bind(refundFailedNotificationDlq())
+                .to(deadLetterExchange()).with(refundFailedQueue + ".dlq");
+    }
+
     // ── Serialización: Jackson con type aliases (cross-service safe) ──────────
 
     @Bean
@@ -163,6 +213,8 @@ public class RabbitMQConfig {
         mappings.put("OrderConfirmedEvent",   OrderConfirmedEvent.class);
         mappings.put("PaymentCompletedEvent", PaymentCompletedEvent.class);
         mappings.put("OrderCancelledEvent",   OrderCancelledEvent.class);
+        mappings.put("RefundCompletedEvent",  RefundCompletedEvent.class);
+        mappings.put("RefundFailedEvent",     RefundFailedEvent.class);
         return mappings;
     }
 

@@ -1,5 +1,7 @@
 package com.tickets.ticket_service.ticket.domain;
 
+import com.tickets.ticket_service.shared.PageResult;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,7 +22,11 @@ public interface TicketRepository {
     /**
      * Carga todos los tickets del usuario con info de orden.
      */
-    List<Ticket> findAllByUserIdWithOrder(UUID userId);
+    PageResult<Ticket> findAllByUserIdWithOrder(UUID userId, int page, int size);
+
+    List<Ticket> findAllByOrderId(UUID orderId);
+
+    Optional<Ticket> findByQrCode(String qrCode);
 
     Ticket save(Ticket ticket);
 }
