@@ -28,4 +28,13 @@ public interface NotificationEmailPort {
                             String firstName,
                             UUID orderId,
                             String reason);
+
+    void sendRefundCompleted(String recipientEmail,
+                             String firstName,
+                             UUID orderId);
+
+    void sendRefundFailed(String recipientEmail,
+                          String firstName,
+                          UUID orderId,
+                          String reason);
 }

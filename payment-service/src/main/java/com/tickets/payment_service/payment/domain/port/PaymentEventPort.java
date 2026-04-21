@@ -15,4 +15,8 @@ public interface PaymentEventPort {
     void publishPaymentCompleted(Payment payment);
 
     void publishPaymentFailed(OrderId orderId, UserId userId, String reason);
+
+    void publishRefundCompleted(OrderId orderId, UserId userId);
+
+    void publishRefundFailed(OrderId orderId, UserId userId, String reason);
 }

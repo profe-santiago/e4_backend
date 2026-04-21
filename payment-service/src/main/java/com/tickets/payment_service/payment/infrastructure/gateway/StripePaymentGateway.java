@@ -3,8 +3,10 @@ package com.tickets.payment_service.payment.infrastructure.gateway;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.RefundCreateParams;
 import com.tickets.payment_service.payment.domain.Money;
 import com.tickets.payment_service.payment.domain.OrderId;
 import com.tickets.payment_service.payment.domain.PaymentChargeResult;
@@ -70,6 +72,33 @@ class StripePaymentGateway implements PaymentGateway {
 
         } catch (StripeException e) {
             log.error("[STRIPE] Charge failed for orderId={}: {}", orderId.value(), e.getMessage());
+            return PaymentChargeResult.failure(e.getMessage());
+        }
+    }
+
+    @Override
+    public PaymentChargeResult refund(String transactionId, OrderId orderId) {
+        try {
+            RefundCreateParams params = RefundCreateParams.builder()
+                    .setPaymentIntent(transactionId)
+                    .build();
+
+            RequestOptions options = RequestOptions.builder()
+                    .setIdempotencyKey("refund-order-" + orderId.value())
+                    .build();
+
+            Refund refund = stripeClient.refunds().create(params, options);
+            log.info("[STRIPE] Refund created: id={}, status={}", refund.getId(), refund.getStatus());
+
+            if ("succeeded".equals(refund.getStatus()) || "pending".equals(refund.getStatus())) {
+                return PaymentChargeResult.success(refund.getId());
+            }
+
+            log.warn("[STRIPE] Unexpected refund status for orderId={}: {}", orderId.value(), refund.getStatus());
+            return PaymentChargeResult.failure("Unexpected refund status: " + refund.getStatus());
+
+        } catch (StripeException e) {
+            log.error("[STRIPE] Refund failed for orderId={}: {}", orderId.value(), e.getMessage());
             return PaymentChargeResult.failure(e.getMessage());
         }
     }

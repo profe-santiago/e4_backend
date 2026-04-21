@@ -5,10 +5,14 @@ import com.tickets.ticket_service.order.domain.Order;
 import com.tickets.ticket_service.order.domain.OrderEventPublisher;
 import com.tickets.ticket_service.order.domain.OrderRepository;
 import com.tickets.ticket_service.order.domain.StockConfirmationItem;
+import com.tickets.ticket_service.order.domain.OrderStatus;
 import com.tickets.ticket_service.shared.UseCase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.tickets.ticket_service.ticket.application.GenerateTicketsUseCase;
 import com.tickets.ticket_service.ticket.application.dto.GenerateTicketsCommand;
 import com.tickets.ticket_service.ticket.application.dto.GeneratedTicketData;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +28,8 @@ import java.util.UUID;
 @UseCase
 public class ConfirmOrderUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(ConfirmOrderUseCase.class);
+
     private final OrderRepository orderRepository;
     private final GenerateTicketsUseCase generateTickets;
     private final OrderEventPublisher eventPublisher;
@@ -36,9 +42,16 @@ public class ConfirmOrderUseCase {
         this.eventPublisher = eventPublisher;
     }
 
+    @Transactional
     public Order execute(UUID orderId, List<StockConfirmationItem> reservedItems) {
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        // Idempotencia: si ya fue confirmada, no repetir la operación
+        if (order.getStatus() == OrderStatus.CONFIRMED) {
+            log.warn("[UC] ConfirmOrder — orden ya CONFIRMED, ignorando (idempotencia): orderId={}", orderId);
+            return order;
+        }
 
         // La lógica de precios y transición vive en el dominio
         order.confirm(reservedItems);

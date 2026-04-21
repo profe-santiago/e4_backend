@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,4 +17,8 @@ interface SpringDataOrderRepository extends JpaRepository<OrderJpaEntity, UUID> 
 
     @Query("SELECT o FROM OrderJpaEntity o LEFT JOIN FETCH o.items WHERE o.id = :id")
     Optional<OrderJpaEntity> findByIdWithItems(@Param("id") UUID id);
+
+    @Query("SELECT o FROM OrderJpaEntity o LEFT JOIN FETCH o.items " +
+           "WHERE o.status = 'PENDING' AND o.createdAt < :threshold")
+    List<OrderJpaEntity> findExpiredPendingOrders(@Param("threshold") LocalDateTime threshold);
 }

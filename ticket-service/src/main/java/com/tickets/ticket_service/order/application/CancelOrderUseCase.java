@@ -7,6 +7,7 @@ import com.tickets.ticket_service.order.domain.OrderEventPublisher;
 import com.tickets.ticket_service.order.domain.OrderRepository;
 import com.tickets.ticket_service.shared.UseCase;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -35,8 +36,11 @@ public class CancelOrderUseCase {
         order.cancel();
         Order saved = orderRepository.save(order);
 
-        eventPublisher.publishOrderCancelled(
-                saved.getId(), saved.getUserId(), "Cancelado por el usuario");
+        List<OrderEventPublisher.StockReleaseItem> stockItems = saved.getItems().stream()
+                .map(i -> new OrderEventPublisher.StockReleaseItem(i.getEventId(), i.getTicketTypeId(), i.getQuantity()))
+                .toList();
+
+        eventPublisher.publishOrderCancelled(saved.getId(), saved.getUserId(), "Cancelado por el usuario", stockItems);
 
         return saved;
     }

@@ -9,6 +9,7 @@ import com.tickets.ticket_service.shared.UseCase;
 import java.util.List;
 import java.util.UUID;
 
+
 /**
  * Caso de uso: marcar la orden como FAILED.
  * Disparado por: sin stock (StockFailedConsumer) o pago rechazado (PaymentFailedConsumer).
@@ -30,8 +31,12 @@ public class FailOrderUseCase {
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         order.fail();
-        orderRepository.save(order);
+        Order saved = orderRepository.save(order);
 
-        eventPublisher.publishOrderCancelled(order.getId(), order.getUserId(), reason);
+        List<OrderEventPublisher.StockReleaseItem> stockItems = saved.getItems().stream()
+                .map(i -> new OrderEventPublisher.StockReleaseItem(i.getEventId(), i.getTicketTypeId(), i.getQuantity()))
+                .toList();
+
+        eventPublisher.publishOrderCancelled(saved.getId(), saved.getUserId(), reason, stockItems);
     }
 }

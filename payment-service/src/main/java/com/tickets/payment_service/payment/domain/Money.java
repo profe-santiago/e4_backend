@@ -41,4 +41,5 @@ public record Money(BigDecimal amount, String currency) {
     public Money multiply(int factor) {
         return new Money(this.amount.multiply(BigDecimal.valueOf(factor)), this.currency);
     }
+
 }

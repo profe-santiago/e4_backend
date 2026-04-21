@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,18 +14,18 @@ import java.util.UUID;
 /**
  * Entidad JPA de pagos.
  *
- * Vive en infraestructura, no en el dominio. El dominio tiene su propio
- * Payment.java (POJO puro). El mapper convierte entre ambos mundos.
+ * Implementa Persistable<UUID> para que Spring Data JPA llame persist() (INSERT)
+ * en entidades nuevas y merge() (UPDATE) en entidades existentes, evitando
+ * StaleObjectStateException cuando el ID es asignado manualmente.
  */
 @Entity
 @Table(name = "payments")
 @Getter
 @Setter
 @NoArgsConstructor
-class PaymentJpaEntity {
+class PaymentJpaEntity implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "order_id", nullable = false, unique = true)
@@ -43,7 +44,7 @@ class PaymentJpaEntity {
     @Column(nullable = false)
     private PaymentStatus status;
 
-    @Column(name = "payment_method_id")
+    @Column(name = "payment_method")
     private String paymentMethodId;
 
     @Column(name = "transaction_id", unique = true)
@@ -54,4 +55,26 @@ class PaymentJpaEntity {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * Indica si la entidad es nueva (INSERT) o existente (UPDATE).
+     * Una entidad es nueva si aún no tiene created_at (se asigna en el dominio al crear).
+     * Tras cargar desde BD (@PostLoad), updatedAt puede ser null pero createdAt != null.
+     */
+    @Transient
+    private boolean isNew = true;
+
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    void setIsNew(boolean isNew) {
+        this.isNew = isNew;
+    }
 }

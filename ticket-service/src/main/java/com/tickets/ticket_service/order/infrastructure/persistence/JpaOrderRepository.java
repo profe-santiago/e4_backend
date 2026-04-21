@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,6 +44,14 @@ public class JpaOrderRepository implements OrderRepository {
                 page,
                 size
         );
+    }
+
+    @Override
+    public List<Order> findExpiredPendingOrders(LocalDateTime expirationThreshold) {
+        return springData.findExpiredPendingOrders(expirationThreshold)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 
     @Override
