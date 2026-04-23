@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+!**/gradlew
+!**/gradlew.bat
+
+# Java compilado
+*.class
+*.jar
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# Variables de entorno
+.env
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# MacOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Maven
+target/
+
+.claude

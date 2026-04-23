@@ -1,0 +1,397 @@
+services:
+
+  # ── Infraestructura ──────────────────────────────────────────────────────────
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    user: "999"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_ERLANG_COOKIE: "e4_backend_cookie"
+    tmpfs:
+      - /var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+    command: redis-server --appendonly yes
+
+  auth-db:
+    image: postgres:16
+    container_name: auth_db
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5442:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+
+  user-db:
+    image: postgres:16
+    container_name: user_db
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5443:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d user_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+
+  event-db:
+    image: postgres:16
+    container_name: event_db
+    environment:
+      POSTGRES_DB: event_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5444:5432"
+    volumes:
+      - event-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d event_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+
+  ticket-db:
+    image: postgres:16
+    container_name: ticket_db
+    environment:
+      POSTGRES_DB: ticket_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5447:5432"
+    volumes:
+      - ticket-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d ticket_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+
+  payment-db:
+    image: postgres:16
+    container_name: payment_db
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5445:5432"
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+
+  notification-db:
+    image: postgres:16
+    container_name: notification_db
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuser
+    ports:
+      - "5446:5432"
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d notification_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tickets-network
+
+  # ── Microservicios ───────────────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: 8090
+      USER_SERVICE_HOST: user-service
+      USER_SERVICE_PORT: 8081
+      EVENT_SERVICE_HOST: event-service
+      EVENT_SERVICE_PORT: 8082
+      TICKET_SERVICE_HOST: ticket-service
+      TICKET_SERVICE_PORT: 8083
+      PAYMENT_SERVICE_HOST: payment-service
+      PAYMENT_SERVICE_PORT: 8084
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      event-service:
+        condition: service_started
+      ticket-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+    networks:
+      - tickets-network
+    restart: on-failure
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth_service
+    ports:
+      - "8090:8090"  # Only exposed for debugging, use gateway instead
+    environment:
+      SERVER_PORT: 8090
+      DB_HOST: auth-db
+      DB_PORT: 5432 # Quitar puertos de BD  en producción
+      DB_NAME: auth_db
+      DB_USER: testuser
+      DB_PASSWORD: testuser
+      APP_NAME: "Auth Service"
+      APP_DESCRIPTION: "Autenticación y emisión de JWT"
+      APP_VERSION: "1.0.0"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - tickets-network
+    restart: on-failure
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user_service
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      DB_HOST: user-db
+      DB_PORT: 5432
+      DB_NAME: user_db
+      DB_USER: testuser
+      DB_PASSWORD: testuser
+      APP_NAME: "User Service"
+      APP_DESCRIPTION: "Gestión de perfiles de usuario"
+      APP_VERSION: "1.0.0"
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - tickets-network
+    restart: on-failure
+
+  event-service:
+    build:
+      context: ./event-service
+      dockerfile: Dockerfile
+    container_name: event_service
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      DB_HOST: event-db
+      DB_PORT: 5432
+      DB_NAME: event_db
+      DB_USER: testuser
+      DB_PASSWORD: testuser
+      APP_NAME: "Event Service"
+      APP_DESCRIPTION: "Catálogo de eventos y tipos de ticket"
+      APP_VERSION: "1.0.0"
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+    depends_on:
+      event-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tickets-network
+    restart: on-failure
+
+  ticket-service:
+    build:
+      context: ./ticket-service
+      dockerfile: Dockerfile
+    container_name: ticket_service
+    ports:
+      - "8083:8083"
+    environment:
+      SERVER_PORT: 8083
+      DB_HOST: ticket-db
+      DB_PORT: 5432
+      DB_NAME: ticket_db
+      DB_USER: testuser
+      DB_PASSWORD: testuser
+      APP_NAME: "Ticket Service"
+      APP_DESCRIPTION: "Gestión de órdenes y tickets"
+      APP_VERSION: "1.0.0"
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+    depends_on:
+      ticket-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tickets-network
+    restart: on-failure
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment_service
+    ports:
+      - "8084:8084"
+    environment:
+      SERVER_PORT: 8084
+      DB_HOST: payment-db
+      DB_PORT: 5432
+      DB_NAME: payment_db
+      DB_USER: testuser
+      DB_PASSWORD: testuser
+      APP_NAME: "Payment Service"
+      APP_DESCRIPTION: "Procesamiento de pagos con Stripe"
+      APP_VERSION: "1.0.0"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tickets-network
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification_service
+    ports:
+      - "8085:8085"
+    environment:
+      SERVER_PORT: 8085
+      DB_HOST: notification-db
+      DB_PORT: 5432
+      DB_NAME: notification_db
+      DB_USER: testuser
+      DB_PASSWORD: testuser
+      APP_NAME: "Notification Service"
+      APP_DESCRIPTION: "Notificaciones por email a usuarios"
+      APP_VERSION: "1.0.0"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM:-noreply@tickets.com}
+      USER_SERVICE_URL: http://user-service:8081
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - tickets-network
+    restart: on-failure
+
+# ── Volúmenes ──────────────────────────────────────────────────────────────────
+
+volumes:
+  auth-db-data:
+  user-db-data:
+  event-db-data:
+  ticket-db-data:
+  payment-db-data:
+  notification-db-data:
+  redis-data:
+
+# ── Red compartida ─────────────────────────────────────────────────────────────
+
+networks:
+  tickets-network:
+    driver: bridge
