@@ -22,7 +22,7 @@ import java.util.UUID;
  * a los use cases correspondientes. No contiene lógica de negocio.
  */
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/api/v1/payments")
 @Tag(name = "Payments", description = "Consultas de estado de pagos")
 public class PaymentController {
 
