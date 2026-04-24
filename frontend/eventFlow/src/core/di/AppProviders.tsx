@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { AuthContextProvider } from './AuthContext'
 import { EventContextProvider } from './EventContext'
 import { OrderContextProvider } from './OrderContext'
+import { TicketContextProvider } from './TicketContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +24,9 @@ export const AppProviders = ({ children }: Props) => (
     <AuthContextProvider>
       <EventContextProvider>
         <OrderContextProvider>
-          {children}
+          <TicketContextProvider>
+            {children}
+          </TicketContextProvider>
         </OrderContextProvider>
       </EventContextProvider>
     </AuthContextProvider>
