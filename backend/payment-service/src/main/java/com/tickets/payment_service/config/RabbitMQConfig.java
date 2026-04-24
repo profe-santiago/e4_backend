@@ -9,17 +9,14 @@ import com.tickets.payment_service.payment.infrastructure.messaging.event.Refund
 import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundFailedEvent;
 import com.tickets.payment_service.payment.infrastructure.messaging.event.RefundInitiatedEvent;
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.retry.RejectAndDontRequeueRecoverer;
 import org.springframework.amqp.support.converter.DefaultClassMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.retry.interceptor.RetryOperationsInterceptor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -140,27 +137,13 @@ public class RabbitMQConfig {
         return template;
     }
 
-    /**
-     * Listener container factory con retry limitado.
-     *
-     * Intenta el mensaje hasta 3 veces con backoff exponencial (1s → 2s → 4s).
-     * Si los 3 intentos fallan, usa RejectAndDontRequeueRecoverer: envía NACK con
-     * requeue=false, lo que activa el DLX configurado en la queue y manda el mensaje
-     * a la DLQ correspondiente. Esto detiene el loop infinito de reintentos.
-     */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory) {
-        RetryOperationsInterceptor interceptor = RetryInterceptorBuilder.stateless()
-                .maxAttempts(3)
-                .backOffOptions(1_000, 2.0, 4_000)
-                .recoverer(new RejectAndDontRequeueRecoverer())
-                .build();
-
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter());
-        factory.setAdviceChain(interceptor);
+        factory.setDefaultRequeueRejected(false);
         return factory;
     }
 
