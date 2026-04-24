@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import type { ReactNode } from 'react'
+import { AuthContextProvider } from './AuthContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,7 +18,9 @@ interface Props {
 
 export const AppProviders = ({ children }: Props) => (
   <QueryClientProvider client={queryClient}>
-    {children}
+    <AuthContextProvider>
+      {children}
+    </AuthContextProvider>
     <Toaster position="top-right" />
   </QueryClientProvider>
 )
