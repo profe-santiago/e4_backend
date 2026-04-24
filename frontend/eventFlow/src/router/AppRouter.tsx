@@ -27,6 +27,10 @@ const router = createBrowserRouter([
         lazy: () => import('@/features/events/ui/pages/EventDetailPage').then((m) => ({ Component: m.EventDetailPage })),
       },
       {
+        path: '/events/:id/checkout',
+        lazy: () => import('@/features/orders/ui/pages/CheckoutPage').then((m) => ({ Component: m.CheckoutPage })),
+      },
+      {
         path: '/orders',
         lazy: () => import('@/features/orders/ui/pages/MyOrdersPage').then((m) => ({ Component: m.MyOrdersPage })),
       },

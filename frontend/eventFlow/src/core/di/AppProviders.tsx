@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import type { ReactNode } from 'react'
 import { AuthContextProvider } from './AuthContext'
 import { EventContextProvider } from './EventContext'
+import { OrderContextProvider } from './OrderContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +22,9 @@ export const AppProviders = ({ children }: Props) => (
   <QueryClientProvider client={queryClient}>
     <AuthContextProvider>
       <EventContextProvider>
-        {children}
+        <OrderContextProvider>
+          {children}
+        </OrderContextProvider>
       </EventContextProvider>
     </AuthContextProvider>
     <Toaster position="top-right" />
