@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEventDetail } from '../hooks/useEventDetail'
+import { useTicketTypesByEvent } from '../hooks/useTicketTypesByEvent'
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
@@ -11,6 +12,7 @@ export const EventDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: event, isLoading, isError } = useEventDetail(id ?? '')
+  const { data: ticketTypes = [] } = useTicketTypesByEvent(id ?? '')
 
   if (isLoading) return <div style={styles.feedback}>Cargando evento...</div>
   if (isError || !event) return <div style={styles.error}>No se pudo cargar el evento.</div>
@@ -35,11 +37,11 @@ export const EventDetailPage = () => {
 
         <p style={styles.description}>{event.description}</p>
 
-        {(event.ticketTypes?.length ?? 0) > 0 && (
+        {ticketTypes.length > 0 && (
           <section style={styles.ticketsSection}>
             <h2 style={styles.ticketsHeading}>Entradas disponibles</h2>
             <div style={styles.ticketsList}>
-              {event.ticketTypes.map((tt) => (
+              {ticketTypes.map((tt) => (
                 <div key={tt.id} style={styles.ticketCard}>
                   <div>
                     <p style={styles.ticketName}>{tt.name}</p>

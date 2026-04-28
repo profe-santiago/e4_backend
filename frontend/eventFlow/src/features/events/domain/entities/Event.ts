@@ -21,7 +21,7 @@ export interface Event {
 }
 
 export interface EventWithTicketTypes extends Event {
-  ticketTypes: TicketType[]
+  ticketTypes?: TicketType[]
 }
 
 export interface CreateEventRequest {

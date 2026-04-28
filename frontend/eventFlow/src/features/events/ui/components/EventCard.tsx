@@ -13,7 +13,7 @@ export const EventCard = ({ event }: Props) => (
     <div style={styles.imagePlaceholder}>
       {event.imageUrl
         ? <img src={event.imageUrl} alt={event.title} style={styles.image} />
-        : <span style={styles.noImage}>📅</span>
+        : <span style={styles.noImage}>Sin imagen</span>
       }
     </div>
     <div style={styles.body}>
