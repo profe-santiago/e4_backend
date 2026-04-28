@@ -39,6 +39,10 @@ const router = createBrowserRouter([
         lazy: () => import('@/features/orders/ui/pages/OrderDetailPage').then((m) => ({ Component: m.OrderDetailPage })),
       },
       {
+        path: '/payments/:id',
+        lazy: () => import('@/features/payments/ui/pages/PaymentDetailPage').then((m) => ({ Component: m.PaymentDetailPage })),
+      },
+      {
         path: '/tickets',
         lazy: () => import('@/features/tickets/ui/pages/MyTicketsPage').then((m) => ({ Component: m.MyTicketsPage })),
       },
