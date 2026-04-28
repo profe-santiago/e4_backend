@@ -22,3 +22,27 @@ export interface Event {
 export interface EventWithTicketTypes extends Event {
   ticketTypes: TicketType[]
 }
+
+export interface CreateEventRequest {
+  title: string
+  description?: string
+  categoryId?: number
+  venue: string
+  city: string
+  country: string
+  startDate: string
+  endDate?: string
+  imageUrl?: string
+}
+
+export interface UpdateEventRequest {
+  title?: string
+  description?: string
+  categoryId?: number
+  venue?: string
+  city?: string
+  country?: string
+  startDate?: string
+  endDate?: string
+  imageUrl?: string
+}

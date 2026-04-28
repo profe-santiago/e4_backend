@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios'
 import type { EventRepository, EventFilters } from '../../domain/ports/EventRepository'
-import type { Event, EventWithTicketTypes } from '../../domain/entities/Event'
+import type { Event, EventWithTicketTypes, CreateEventRequest, UpdateEventRequest, EventStatus } from '../../domain/entities/Event'
 import type { Category } from '../../domain/entities/Category'
 import type { PaginatedResponse } from '@/shared/types/pagination.types'
 
@@ -26,5 +26,31 @@ export class HttpEventAdapter implements EventRepository {
   async listCategories(): Promise<Category[]> {
     const { data } = await this.client.get<Category[]>('/api/v1/categories')
     return data
+  }
+
+  async getMyEvents(): Promise<Event[]> {
+    const { data } = await this.client.get<Event[]>('/api/v1/events/my')
+    return data
+  }
+
+  async createEvent(request: CreateEventRequest): Promise<Event> {
+    const { data } = await this.client.post<Event>('/api/v1/events', request)
+    return data
+  }
+
+  async updateEvent(id: string, request: UpdateEventRequest): Promise<Event> {
+    const { data } = await this.client.put<Event>(`/api/v1/events/${id}`, request)
+    return data
+  }
+
+  async changeEventStatus(id: string, status: EventStatus): Promise<Event> {
+    const { data } = await this.client.patch<Event>(`/api/v1/events/${id}/status`, null, {
+      params: { status },
+    })
+    return data
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    await this.client.delete(`/api/v1/events/${id}`)
   }
 }

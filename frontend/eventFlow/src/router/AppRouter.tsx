@@ -51,6 +51,10 @@ const router = createBrowserRouter([
         lazy: () => import('@/features/profile/ui/pages/ProfilePage').then((m) => ({ Component: m.ProfilePage })),
       },
       {
+        path: '/my-events',
+        lazy: () => import('@/features/events/ui/pages/MyEventsPage').then((m) => ({ Component: m.MyEventsPage })),
+      },
+      {
         path: '/events/new',
         lazy: () => import('@/features/events/ui/pages/CreateEventPage').then((m) => ({ Component: m.CreateEventPage })),
       },
