@@ -73,6 +73,10 @@ const router = createBrowserRouter([
             path: '/admin/tickets/validate',
             lazy: () => import('@/features/tickets/ui/pages/ValidateTicketPage').then((m) => ({ Component: m.ValidateTicketPage })),
           },
+          {
+            path: '/admin/categories',
+            lazy: () => import('@/features/events/ui/pages/AdminCategoriesPage').then((m) => ({ Component: m.AdminCategoriesPage })),
+          },
         ],
       },
     ],

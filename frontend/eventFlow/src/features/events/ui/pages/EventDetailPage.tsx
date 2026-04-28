@@ -24,18 +24,18 @@ export const EventDetailPage = () => {
       )}
 
       <div style={styles.body}>
-        <span style={styles.category}>{event.category}</span>
+        <span style={styles.category}>{event.category?.name}</span>
         <h1 style={styles.title}>{event.title}</h1>
 
         <div style={styles.meta}>
-          <span>📍 {event.venue}, {event.city}, {event.country}</span>
-          <span>🗓 {formatDate(event.startDate)}</span>
+          <span>{event.venue}, {event.city}, {event.country}</span>
+          <span>{formatDate(event.startDate)}</span>
           {event.endDate !== event.startDate && <span>hasta {formatDate(event.endDate)}</span>}
         </div>
 
         <p style={styles.description}>{event.description}</p>
 
-        {event.ticketTypes.length > 0 && (
+        {(event.ticketTypes?.length ?? 0) > 0 && (
           <section style={styles.ticketsSection}>
             <h2 style={styles.ticketsHeading}>Entradas disponibles</h2>
             <div style={styles.ticketsList}>

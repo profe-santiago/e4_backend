@@ -8,6 +8,7 @@ import { TicketContextProvider } from './TicketContext'
 import { UserContextProvider } from './UserContext'
 import { TicketTypeContextProvider } from './TicketTypeContext'
 import { PaymentContextProvider } from './PaymentContext'
+import { CategoryContextProvider } from './CategoryContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,7 +32,9 @@ export const AppProviders = ({ children }: Props) => (
             <UserContextProvider>
               <TicketTypeContextProvider>
                 <PaymentContextProvider>
-                  {children}
+                  <CategoryContextProvider>
+                    {children}
+                  </CategoryContextProvider>
                 </PaymentContextProvider>
               </TicketTypeContextProvider>
             </UserContextProvider>
