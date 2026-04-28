@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useEventDetail } from '@/features/events/ui/hooks/useEventDetail'
+import { useTicketTypesByEvent } from '@/features/events/ui/hooks/useTicketTypesByEvent'
 import { useCreateOrder } from '../hooks/useCreateOrder'
 
 interface LocationState {
@@ -19,10 +20,11 @@ export const CheckoutPage = () => {
   const [quantity, setQuantity] = useState(1)
   const [paymentMethodId, setPaymentMethodId] = useState('')
 
-  const { data: event, isLoading } = useEventDetail(eventId ?? '')
+  const { data: event, isLoading: isLoadingEvent } = useEventDetail(eventId ?? '')
+  const { data: ticketTypes = [], isLoading: isLoadingTickets } = useTicketTypesByEvent(eventId ?? '')
   const { mutate: createOrder, isPending } = useCreateOrder()
 
-  if (isLoading) return <div style={styles.feedback}>Cargando...</div>
+  if (isLoadingEvent || isLoadingTickets) return <div style={styles.feedback}>Cargando...</div>
   if (!event || !state?.ticketTypeId) {
     return (
       <div style={styles.feedback}>
@@ -32,7 +34,7 @@ export const CheckoutPage = () => {
     )
   }
 
-  const ticketType = event.ticketTypes.find((tt) => tt.id === state.ticketTypeId)
+  const ticketType = ticketTypes.find((tt) => tt.id === state.ticketTypeId)
   if (!ticketType) return <div style={styles.feedback}>Ticket no encontrado.</div>
 
   const maxQty = Math.min(ticketType.availableQuantity, 10)

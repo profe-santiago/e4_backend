@@ -1,4 +1,5 @@
 import type { TicketType } from './TicketType'
+import type { Category } from './Category'
 
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
 
@@ -7,7 +8,7 @@ export interface Event {
   organizerId: string
   title: string
   description: string
-  category: string
+  category: Category | null
   venue: string
   city: string
   country: string
@@ -20,5 +21,29 @@ export interface Event {
 }
 
 export interface EventWithTicketTypes extends Event {
-  ticketTypes: TicketType[]
+  ticketTypes?: TicketType[]
+}
+
+export interface CreateEventRequest {
+  title: string
+  description?: string
+  categoryId?: number
+  venue: string
+  city: string
+  country: string
+  startDate: string
+  endDate?: string
+  imageUrl?: string
+}
+
+export interface UpdateEventRequest {
+  title?: string
+  description?: string
+  categoryId?: number
+  venue?: string
+  city?: string
+  country?: string
+  startDate?: string
+  endDate?: string
+  imageUrl?: string
 }

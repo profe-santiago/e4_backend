@@ -2,6 +2,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useOrderDetail } from '../hooks/useOrderDetail'
 import { useOrderActions } from '../hooks/useOrderActions'
 import { OrderStatusTracker } from '../components/OrderStatusTracker'
+import { usePaymentByOrder } from '@/features/payments/ui/hooks/usePaymentByOrder'
+import type { PaymentStatus } from '@/features/payments/domain/entities/Payment'
 
 const formatPrice = (amount: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount)
@@ -9,11 +11,22 @@ const formatPrice = (amount: number) =>
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
+const paymentStatusConfig: Record<PaymentStatus, { label: string; color: string; background: string }> = {
+  PENDING: { label: 'Pendiente', color: '#92400e', background: '#fef3c7' },
+  APPROVED: { label: 'Aprobado', color: '#065f46', background: '#d1fae5' },
+  REJECTED: { label: 'Rechazado', color: '#991b1b', background: '#fee2e2' },
+  REFUNDED: { label: 'Reembolsado', color: '#1e40af', background: '#dbeafe' },
+}
+
 export const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: order, isLoading, isError } = useOrderDetail(id ?? '')
   const { cancel, refund } = useOrderActions(id ?? '')
+  const { data: payment, isLoading: isPaymentLoading, isError: isPaymentError } = usePaymentByOrder(
+    order?.id ?? '',
+    order?.status === 'CONFIRMED',
+  )
 
   if (isLoading) return <div style={styles.feedback}>Cargando orden...</div>
   if (isError || !order) return <div style={styles.error}>No se pudo cargar la orden.</div>
@@ -48,6 +61,40 @@ export const OrderDetailPage = () => {
 
       {order.status === 'CONFIRMED' && (
         <Link to="/tickets" style={styles.ticketsLink}>Ver mis tickets →</Link>
+      )}
+
+      {order.status === 'CONFIRMED' && (
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Pago</h2>
+          {isPaymentLoading && (
+            <p style={styles.paymentMeta}>Cargando información de pago...</p>
+          )}
+          {isPaymentError && (
+            <p style={styles.paymentMeta}>No se pudo cargar el pago.</p>
+          )}
+          {payment && (() => {
+            const cfg = paymentStatusConfig[payment.status]
+            return (
+              <div style={styles.paymentContent}>
+                <div style={styles.paymentRow}>
+                  <span style={styles.paymentLabel}>Estado</span>
+                  <span style={{ ...styles.paymentBadge, color: cfg.color, background: cfg.background }}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <div style={styles.paymentRow}>
+                  <span style={styles.paymentLabel}>Monto</span>
+                  <span style={styles.paymentValue}>{formatPrice(payment.amount)}</span>
+                </div>
+                <div style={styles.paymentLinkRow}>
+                  <Link to={`/payments/${payment.id}`} style={styles.paymentLink}>
+                    Ver detalle del pago →
+                  </Link>
+                </div>
+              </div>
+            )
+          })()}
+        </section>
       )}
 
       <div style={styles.actions}>
@@ -94,4 +141,12 @@ const styles: Record<string, React.CSSProperties> = {
   actions: { display: 'flex', gap: '0.75rem', marginTop: '1rem' },
   cancelBtn: { padding: '0.6rem 1.25rem', border: '1px solid #e53e3e', borderRadius: '4px', color: '#e53e3e', background: 'none', cursor: 'pointer' },
   refundBtn: { padding: '0.6rem 1.25rem', border: '1px solid #3182ce', borderRadius: '4px', color: '#3182ce', background: 'none', cursor: 'pointer' },
+  paymentMeta: { color: '#888', fontSize: '0.875rem', margin: 0 },
+  paymentContent: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
+  paymentRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #f0f0f0' },
+  paymentLabel: { color: '#666', fontSize: '0.875rem' },
+  paymentValue: { fontWeight: 500, fontSize: '0.9rem' },
+  paymentBadge: { display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 },
+  paymentLinkRow: { paddingTop: '0.5rem' },
+  paymentLink: { color: '#3182ce', textDecoration: 'none', fontSize: '0.875rem' },
 }

@@ -39,6 +39,10 @@ const router = createBrowserRouter([
         lazy: () => import('@/features/orders/ui/pages/OrderDetailPage').then((m) => ({ Component: m.OrderDetailPage })),
       },
       {
+        path: '/payments/:id',
+        lazy: () => import('@/features/payments/ui/pages/PaymentDetailPage').then((m) => ({ Component: m.PaymentDetailPage })),
+      },
+      {
         path: '/tickets',
         lazy: () => import('@/features/tickets/ui/pages/MyTicketsPage').then((m) => ({ Component: m.MyTicketsPage })),
       },
@@ -49,6 +53,10 @@ const router = createBrowserRouter([
       {
         path: '/profile',
         lazy: () => import('@/features/profile/ui/pages/ProfilePage').then((m) => ({ Component: m.ProfilePage })),
+      },
+      {
+        path: '/my-events',
+        lazy: () => import('@/features/events/ui/pages/MyEventsPage').then((m) => ({ Component: m.MyEventsPage })),
       },
       {
         path: '/events/new',
@@ -64,6 +72,10 @@ const router = createBrowserRouter([
           {
             path: '/admin/tickets/validate',
             lazy: () => import('@/features/tickets/ui/pages/ValidateTicketPage').then((m) => ({ Component: m.ValidateTicketPage })),
+          },
+          {
+            path: '/admin/categories',
+            lazy: () => import('@/features/events/ui/pages/AdminCategoriesPage').then((m) => ({ Component: m.AdminCategoriesPage })),
           },
         ],
       },
