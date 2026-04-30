@@ -55,20 +55,28 @@ const router = createBrowserRouter([
         lazy: () => import('@/features/profile/ui/pages/ProfilePage').then((m) => ({ Component: m.ProfilePage })),
       },
       {
-        path: '/my-events',
-        lazy: () => import('@/features/events/ui/pages/MyEventsPage').then((m) => ({ Component: m.MyEventsPage })),
-      },
-      {
-        path: '/events/new',
-        lazy: () => import('@/features/events/ui/pages/CreateEventPage').then((m) => ({ Component: m.CreateEventPage })),
-      },
-      {
-        path: '/events/:id/edit',
-        lazy: () => import('@/features/events/ui/pages/EditEventPage').then((m) => ({ Component: m.EditEventPage })),
+        path: '/notifications',
+        lazy: () => import('@/features/notifications/ui/pages/NotificationsPage').then((m) => ({ Component: m.NotificationsPage })),
       },
       {
         element: <RoleRoute requiredRole="ADMIN" />,
         children: [
+          {
+            path: '/my-events',
+            lazy: () => import('@/features/events/ui/pages/MyEventsPage').then((m) => ({ Component: m.MyEventsPage })),
+          },
+          {
+            path: '/events/new',
+            lazy: () => import('@/features/events/ui/pages/CreateEventPage').then((m) => ({ Component: m.CreateEventPage })),
+          },
+          {
+            path: '/events/:id/edit',
+            lazy: () => import('@/features/events/ui/pages/EditEventPage').then((m) => ({ Component: m.EditEventPage })),
+          },
+          {
+            path: '/events/:id/overview',
+            lazy: () => import('@/features/events/ui/pages/EventOverviewPage').then((m) => ({ Component: m.EventOverviewPage })),
+          },
           {
             path: '/admin/tickets/validate',
             lazy: () => import('@/features/tickets/ui/pages/ValidateTicketPage').then((m) => ({ Component: m.ValidateTicketPage })),

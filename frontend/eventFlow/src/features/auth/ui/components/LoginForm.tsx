@@ -23,18 +23,18 @@ export const LoginForm = () => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
       <div style={styles.field}>
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" {...register('email')} style={styles.input} />
-        {errors.email && <span style={styles.error}>{errors.email.message}</span>}
+        <label htmlFor="email" className="ef-label">Email</label>
+        <input id="email" type="email" {...register('email')} className="ef-input" placeholder="tu@email.com" />
+        {errors.email && <span className="ef-error">{errors.email.message}</span>}
       </div>
 
       <div style={styles.field}>
-        <label htmlFor="password">Contraseña</label>
-        <input id="password" type="password" {...register('password')} style={styles.input} />
-        {errors.password && <span style={styles.error}>{errors.password.message}</span>}
+        <label htmlFor="password" className="ef-label">Contraseña</label>
+        <input id="password" type="password" {...register('password')} className="ef-input" placeholder="••••••••" />
+        {errors.password && <span className="ef-error">{errors.password.message}</span>}
       </div>
 
-      <button type="submit" disabled={isLoading} style={styles.button}>
+      <button type="submit" disabled={isLoading} className="ef-btn ef-btn-full" style={{ marginTop: '0.5rem' }}>
         {isLoading ? 'Ingresando...' : 'Ingresar'}
       </button>
     </form>
@@ -42,9 +42,6 @@ export const LoginForm = () => {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  form: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-  field: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-  input: { padding: '0.5rem', fontSize: '1rem', borderRadius: '4px', border: '1px solid #ccc' },
-  error: { color: '#e53e3e', fontSize: '0.85rem' },
-  button: { padding: '0.75rem', fontSize: '1rem', cursor: 'pointer', borderRadius: '4px', border: 'none', background: '#3182ce', color: '#fff' },
+  form:  { display: 'flex', flexDirection: 'column', gap: '1rem' },
+  field: { display: 'flex', flexDirection: 'column' },
 }

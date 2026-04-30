@@ -34,7 +34,9 @@ public class CreateTicketTypeUseCase {
                 command.name(),
                 command.description(),
                 command.price(),
-                command.totalQuantity()
+                command.totalQuantity(),
+                command.saleStartDate(),
+                command.saleEndDate()
         );
 
         return ticketTypeRepository.save(ticketType);

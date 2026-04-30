@@ -38,6 +38,11 @@ public class FallbackController {
         return buildFallbackResponse("Payment Service is temporarily unavailable. Please try again later.");
     }
 
+    @RequestMapping("/notification")
+    public ResponseEntity<Map<String, Object>> notificationServiceFallback() {
+        return buildFallbackResponse("Notification Service is temporarily unavailable. Please try again later.");
+    }
+
     private ResponseEntity<Map<String, Object>> buildFallbackResponse(String message) {
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now());

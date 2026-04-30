@@ -1,4 +1,5 @@
 import type { Category } from '../../domain/entities/Category'
+import { t } from '@/shared/config/theme'
 
 interface Props {
   categories: Category[]
@@ -28,6 +29,20 @@ export const CategoryFilter = ({ categories, selected, onChange }: Props) => (
 
 const styles: Record<string, React.CSSProperties> = {
   container: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' },
-  chip: { padding: '0.4rem 1rem', borderRadius: '999px', border: '1px solid #cbd5e0', background: '#fff', cursor: 'pointer', fontSize: '0.875rem' },
-  active: { background: '#3182ce', color: '#fff', borderColor: '#3182ce' },
+  chip: {
+    padding: '0.35rem 1rem',
+    borderRadius: '999px',
+    border: `1px solid ${t.border2}`,
+    background: t.surface,
+    color: t.textMuted,
+    cursor: 'pointer',
+    fontSize: '0.85rem',
+    fontWeight: 500,
+    transition: 'all 0.15s',
+  },
+  active: {
+    background: t.accent,
+    color: '#fff',
+    borderColor: t.accent,
+  },
 }

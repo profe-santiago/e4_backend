@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useEventDetail } from '@/features/events/ui/hooks/useEventDetail'
 import { useTicketTypesByEvent } from '@/features/events/ui/hooks/useTicketTypesByEvent'
 import { useCreateOrder } from '../hooks/useCreateOrder'
+import { t } from '@/shared/config/theme'
 
 interface LocationState {
   ticketTypeId: number
@@ -29,7 +30,7 @@ export const CheckoutPage = () => {
     return (
       <div style={styles.feedback}>
         Información incompleta.{' '}
-        <button style={styles.link} onClick={() => navigate(-1)}>Volver</button>
+        <button style={styles.linkBtn} onClick={() => navigate(-1)}>Volver</button>
       </div>
     )
   }
@@ -42,10 +43,7 @@ export const CheckoutPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    createOrder({
-      items: [{ eventId: event.id, ticketTypeId: ticketType.id, quantity }],
-      paymentMethodId,
-    })
+    createOrder({ items: [{ eventId: event.id, ticketTypeId: ticketType.id, quantity }], paymentMethodId })
   }
 
   return (
@@ -55,22 +53,19 @@ export const CheckoutPage = () => {
 
       <div style={styles.summary}>
         <h2 style={styles.eventTitle}>{event.title}</h2>
-        <p style={styles.eventMeta}>{event.venue} — {event.city}</p>
-
-        <div style={styles.ticketInfo}>
-          <p style={styles.ticketName}>{ticketType.name}</p>
-          <p style={styles.ticketPrice}>{formatPrice(ticketType.price)} por entrada</p>
-        </div>
+        <p style={styles.eventMeta}>📍 {event.venue} — {event.city}</p>
+        <div style={styles.divider} />
+        <p style={styles.ticketName}>{ticketType.name}</p>
+        <p style={styles.ticketPrice}>{formatPrice(ticketType.price)} por entrada</p>
       </div>
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.field}>
-          <label htmlFor="quantity">Cantidad</label>
+          <label className="ef-label">Cantidad</label>
           <select
-            id="quantity"
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
-            style={styles.input}
+            className="ef-input"
           >
             {Array.from({ length: maxQty }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>{n}</option>
@@ -79,25 +74,24 @@ export const CheckoutPage = () => {
         </div>
 
         <div style={styles.field}>
-          <label htmlFor="paymentMethod">ID de método de pago (Stripe)</label>
+          <label className="ef-label">ID de método de pago (Stripe)</label>
           <input
-            id="paymentMethod"
             type="text"
             placeholder="pm_card_visa"
             value={paymentMethodId}
             onChange={(e) => setPaymentMethodId(e.target.value)}
-            style={styles.input}
+            className="ef-input"
             required
           />
-          <span style={styles.hint}>En desarrollo usar: pm_card_visa</span>
+          <span style={styles.hint}>Para pruebas usar: <code style={styles.code}>pm_card_visa</code></span>
         </div>
 
-        <div style={styles.total}>
-          <span>Total a pagar</span>
-          <strong>{formatPrice(total)}</strong>
+        <div style={styles.totalRow}>
+          <span style={styles.totalLabel}>Total a pagar</span>
+          <strong style={styles.totalAmount}>{formatPrice(total)}</strong>
         </div>
 
-        <button type="submit" disabled={isPending} style={styles.submitBtn}>
+        <button type="submit" disabled={isPending} className="ef-btn ef-btn-full">
           {isPending ? 'Procesando...' : `Confirmar compra — ${formatPrice(total)}`}
         </button>
       </form>
@@ -106,21 +100,22 @@ export const CheckoutPage = () => {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { maxWidth: '560px', margin: '0 auto', padding: '2rem 1rem' },
-  feedback: { textAlign: 'center', padding: '4rem', color: '#555' },
-  back: { background: 'none', border: 'none', cursor: 'pointer', color: '#3182ce', marginBottom: '1rem', padding: 0, fontSize: '0.9rem' },
-  heading: { fontSize: '1.75rem', fontWeight: 700, marginBottom: '1.25rem' },
-  summary: { border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem', background: '#f7fafc' },
-  eventTitle: { fontSize: '1.1rem', fontWeight: 600, margin: '0 0 0.25rem' },
-  eventMeta: { color: '#555', fontSize: '0.875rem', margin: '0 0 0.75rem' },
-  ticketInfo: { borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' },
-  ticketName: { fontWeight: 500, margin: 0 },
-  ticketPrice: { color: '#3182ce', fontWeight: 600, margin: '0.2rem 0 0' },
-  form: { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
-  field: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-  input: { padding: '0.5rem', fontSize: '1rem', borderRadius: '4px', border: '1px solid #cbd5e0' },
-  hint: { color: '#888', fontSize: '0.8rem' },
-  total: { display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderTop: '1px solid #e2e8f0', fontSize: '1rem' },
-  submitBtn: { padding: '0.85rem', fontSize: '1rem', background: '#38a169', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 },
-  link: { background: 'none', border: 'none', color: '#3182ce', cursor: 'pointer', textDecoration: 'underline' },
+  container:   { maxWidth: '520px', margin: '0 auto' },
+  feedback:    { textAlign: 'center', padding: '4rem', color: t.textMuted },
+  back:        { background: 'none', border: 'none', cursor: 'pointer', color: t.accent, marginBottom: '1.25rem', padding: 0, fontSize: '0.9rem', fontWeight: 500 },
+  heading:     { fontSize: '1.75rem', fontWeight: 700, color: t.text, marginBottom: '1.25rem' },
+  summary:     { background: t.surface, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '1.25rem', marginBottom: '1.5rem' },
+  eventTitle:  { fontSize: '1.05rem', fontWeight: 600, color: t.text, margin: '0 0 0.25rem' },
+  eventMeta:   { color: t.textMuted, fontSize: '0.875rem', margin: '0 0 0.875rem' },
+  divider:     { height: '1px', background: t.border, margin: '0.875rem 0' },
+  ticketName:  { fontWeight: 500, margin: 0, color: t.text },
+  ticketPrice: { color: t.accent, fontWeight: 600, margin: '0.2rem 0 0', fontSize: '0.9rem' },
+  form:        { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
+  field:       { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  hint:        { color: t.textDim, fontSize: '0.8rem', marginTop: '0.25rem' },
+  code:        { background: t.surface2, padding: '0.1rem 0.4rem', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.8rem', color: t.text },
+  totalRow:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 0', borderTop: `1px solid ${t.border}` },
+  totalLabel:  { color: t.textMuted, fontSize: '0.95rem' },
+  totalAmount: { fontSize: '1.15rem', color: t.text },
+  linkBtn:     { background: 'none', border: 'none', color: t.accent, cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit' },
 }

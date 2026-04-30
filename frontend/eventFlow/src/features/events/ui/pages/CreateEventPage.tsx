@@ -1,128 +1,362 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import { useCreateEvent } from '../hooks/useCreateEvent'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'react-hot-toast'
+import { useEventRepository } from '@/core/di/EventContext'
+import { useTicketTypeRepository } from '@/core/di/TicketTypeContext'
+import { CreateEventUseCase } from '../../application/use-cases/CreateEventUseCase'
+import { CreateTicketTypeUseCase } from '../../application/use-cases/CreateTicketTypeUseCase'
 import { useCategories } from '../hooks/useCategories'
+import type { CreateTicketTypeRequest } from '../../domain/entities/TicketType'
+import { t } from '@/shared/config/theme'
+import { COUNTRIES, CURRENCIES } from '@/shared/config/formOptions'
+import { ImagePreview } from '@/shared/components/ImagePreview'
 
-const schema = z.object({
-  title: z.string().min(1, 'Requerido').max(255),
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const isUrl = (s: string) => { try { return !!new URL(s) } catch { return false } }
+const todayStr = () => new Date().toISOString().split('T')[0]
+const nowStr = () => new Date().toISOString().slice(0, 16)
+
+// ── Schemas ──────────────────────────────────────────────────────────────────
+
+const eventSchema = z.object({
+  title:       z.string().min(1, 'Requerido').max(255),
   description: z.string().optional(),
-  categoryId: z.coerce.number().optional(),
-  venue: z.string().min(1, 'Requerido').max(255),
-  city: z.string().min(1, 'Requerido').max(100),
-  country: z.string().min(1, 'Requerido').max(100),
-  startDate: z.string().min(1, 'Requerido'),
-  endDate: z.string().optional(),
-  imageUrl: z.string().url('URL inválida').max(500).optional().or(z.literal('')),
+  categoryId:  z.number().optional(),
+  venue:       z.string().min(1, 'Requerido').max(255),
+  city:        z.string().min(1, 'Requerido').max(100),
+  country:     z.string().min(1, 'Requerido').max(100),
+  startDate:   z.string().min(1, 'Requerido'),
+  endDate:     z.string().optional(),
+  imageUrl:    z.string().url('URL inválida').max(500).optional().or(z.literal('')),
+}).superRefine((data, ctx) => {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  if (data.startDate && new Date(data.startDate) < today) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No puede ser una fecha pasada', path: ['startDate'] })
+  }
+  if (data.endDate && data.startDate && new Date(data.endDate) < new Date(data.startDate)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe ser igual o posterior a la fecha de inicio', path: ['endDate'] })
+  }
 })
 
-type FormValues = z.infer<typeof schema>
+const ticketSchema = z.object({
+  name:          z.string().min(1, 'Requerido').max(100),
+  description:   z.string().optional(),
+  price:         z.number().min(0, 'No puede ser negativo'),
+  currency:      z.string().length(3),
+  totalQuantity: z.number().int().min(1, 'Mínimo 1'),
+  saleStartDate: z.string().optional(),
+  saleEndDate:   z.string().optional(),
+}).superRefine((data, ctx) => {
+  const now = new Date()
+  if (data.saleStartDate && new Date(data.saleStartDate) < now) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No puede ser una fecha pasada', path: ['saleStartDate'] })
+  }
+  if (data.saleEndDate && new Date(data.saleEndDate) < now) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No puede ser una fecha pasada', path: ['saleEndDate'] })
+  }
+  if (data.saleStartDate && data.saleEndDate &&
+      new Date(data.saleEndDate) <= new Date(data.saleStartDate)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe ser posterior al inicio de venta', path: ['saleEndDate'] })
+  }
+})
+
+type EventFormValues = z.infer<typeof eventSchema>
+type TicketFormValues = z.infer<typeof ticketSchema>
+
+// ── Ticket type form (NOT a <form> to avoid nesting inside the event form) ───
+
+const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => void; onCancel: () => void }) => {
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<TicketFormValues>({
+    resolver: zodResolver(ticketSchema),
+    defaultValues: { currency: 'USD', totalQuantity: 1, price: 0 },
+  })
+
+  const onSubmit = (values: TicketFormValues) => {
+    onAdd(values)
+    reset({ currency: 'ARS', totalQuantity: 1, price: 0 })
+  }
+
+  return (
+    <div style={ttStyles.form}>
+      <div style={ttStyles.grid}>
+        <div style={ttStyles.field}>
+          <label className="ef-label">Nombre *</label>
+          <input type="text" {...register('name')} className="ef-input" placeholder="Ej: General, VIP..." />
+          {errors.name && <span className="ef-error">{errors.name.message}</span>}
+        </div>
+        <div style={ttStyles.field}>
+          <label className="ef-label">Precio *</label>
+          <input type="number" step="0.01" min="0" {...register('price', { valueAsNumber: true })} className="ef-input" />
+          {errors.price && <span className="ef-error">{errors.price.message}</span>}
+        </div>
+        <div style={ttStyles.field}>
+          <label className="ef-label">Moneda</label>
+          <select {...register('currency')} className="ef-input">
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
+            ))}
+          </select>
+        </div>
+        <div style={ttStyles.field}>
+          <label className="ef-label">Cantidad *</label>
+          <input type="number" min="1" {...register('totalQuantity', { valueAsNumber: true })} className="ef-input" />
+          {errors.totalQuantity && <span className="ef-error">{errors.totalQuantity.message}</span>}
+        </div>
+      </div>
+      <div style={ttStyles.field}>
+        <label className="ef-label">Descripción</label>
+        <input type="text" {...register('description')} className="ef-input" placeholder="Opcional" />
+      </div>
+      <div style={ttStyles.dateRow}>
+        <div style={ttStyles.field}>
+          <label className="ef-label">Inicio de venta <span style={ttStyles.labelHint}>(fecha y hora)</span></label>
+          <input type="datetime-local" min={nowStr()} {...register('saleStartDate')} className="ef-input" />
+          {errors.saleStartDate && <span className="ef-error">{errors.saleStartDate.message}</span>}
+        </div>
+        <div style={ttStyles.field}>
+          <label className="ef-label">Cierre de venta <span style={ttStyles.labelHint}>(fecha y hora)</span></label>
+          <input type="datetime-local" min={nowStr()} {...register('saleEndDate')} className="ef-input" />
+          {errors.saleEndDate && <span className="ef-error">{errors.saleEndDate.message}</span>}
+        </div>
+      </div>
+      <p style={ttStyles.hint}>
+        Si no configurás fechas de venta, se usarán las fechas del evento: la venta abrirá de inmediato y cerrará al inicio del evento.
+      </p>
+      <div style={ttStyles.actions}>
+        <button type="button" className="ef-btn-ghost" style={ttStyles.btn} onClick={onCancel}>
+          Cancelar
+        </button>
+        <button type="button" className="ef-btn" style={ttStyles.btn} onClick={handleSubmit(onSubmit)}>
+          Agregar tipo
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
 
 export const CreateEventPage = () => {
   const navigate = useNavigate()
-  const { mutate: create, isPending } = useCreateEvent()
+  const queryClient = useQueryClient()
+  const eventRepository = useEventRepository()
+  const ticketTypeRepository = useTicketTypeRepository()
   const { data: categories = [] } = useCategories()
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const [ticketTypes, setTicketTypes] = useState<TicketFormValues[]>([])
+  const [showTicketForm, setShowTicketForm] = useState(false)
 
-  const onSubmit = (values: FormValues) => {
-    create({
-      title: values.title,
-      description: values.description || undefined,
-      categoryId: values.categoryId || undefined,
-      venue: values.venue,
-      city: values.city,
-      country: values.country,
-      startDate: new Date(values.startDate).toISOString(),
-      endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-      imageUrl: values.imageUrl || undefined,
-    })
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<EventFormValues>({
+    resolver: zodResolver(eventSchema),
+  })
+
+  const imageUrl = watch('imageUrl') ?? ''
+
+  const { mutateAsync: createEvent, isPending } = useMutation({
+    mutationFn: (req: Parameters<CreateEventUseCase['execute']>[0]) =>
+      new CreateEventUseCase(eventRepository).execute(req),
+  })
+
+  const onSubmit = async (values: EventFormValues) => {
+    try {
+      const event = await createEvent({
+        title:       values.title,
+        description: values.description || undefined,
+        categoryId:  values.categoryId || undefined,
+        venue:       values.venue,
+        city:        values.city,
+        country:     values.country,
+        startDate:   new Date(values.startDate).toISOString(),
+        endDate:     values.endDate ? new Date(values.endDate).toISOString() : undefined,
+        imageUrl:    values.imageUrl || undefined,
+      })
+
+      if (ticketTypes.length > 0) {
+        const useCase = new CreateTicketTypeUseCase(ticketTypeRepository)
+        await Promise.all(
+          ticketTypes.map((tt) => {
+            const req: CreateTicketTypeRequest = {
+              name:          tt.name,
+              description:   tt.description || undefined,
+              price:         tt.price,
+              currency:      tt.currency,
+              totalQuantity: tt.totalQuantity,
+              saleStartDate: tt.saleStartDate || undefined,
+              saleEndDate:   tt.saleEndDate   || undefined,
+            }
+            return useCase.execute(event.id, req)
+          }),
+        )
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['my-events'] })
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      toast.success('Evento creado con éxito')
+      navigate('/my-events')
+    } catch {
+      toast.error('Error al crear el evento. Intentá de nuevo.')
+    }
+  }
+
+  const handleAddTicket = (values: TicketFormValues) => {
+    setTicketTypes((prev) => [...prev, values])
+    setShowTicketForm(false)
+  }
+
+  const handleRemoveTicket = (index: number) => {
+    setTicketTypes((prev) => prev.filter((_, i) => i !== index))
   }
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <button style={styles.backBtn} onClick={() => navigate('/my-events')}>
-          ← Mis eventos
-        </button>
+        <button style={styles.back} onClick={() => navigate('/my-events')}>← Mis eventos</button>
         <h1 style={styles.heading}>Crear evento</h1>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
-        <div style={styles.field}>
-          <label htmlFor="title" style={styles.label}>Título *</label>
-          <input id="title" type="text" {...register('title')} style={styles.input} />
-          {errors.title && <span style={styles.errorMsg}>{errors.title.message}</span>}
-        </div>
 
-        <div style={styles.field}>
-          <label htmlFor="description" style={styles.label}>Descripción</label>
-          <textarea id="description" {...register('description')} style={styles.textarea} rows={4} />
-        </div>
+        {/* ── Datos del evento ── */}
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Datos del evento</h2>
 
-        <div style={styles.field}>
-          <label htmlFor="categoryId" style={styles.label}>Categoría</label>
-          <select id="categoryId" {...register('categoryId')} style={styles.input}>
-            <option value="">Sin categoría</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div style={styles.fields}>
+            <div style={styles.field}>
+              <label className="ef-label">Título *</label>
+              <input type="text" {...register('title')} className="ef-input" />
+              {errors.title && <span className="ef-error">{errors.title.message}</span>}
+            </div>
 
-        <div style={styles.field}>
-          <label htmlFor="venue" style={styles.label}>Lugar *</label>
-          <input id="venue" type="text" {...register('venue')} style={styles.input} placeholder="Nombre del lugar" />
-          {errors.venue && <span style={styles.errorMsg}>{errors.venue.message}</span>}
-        </div>
+            <div style={styles.field}>
+              <label className="ef-label">Descripción</label>
+              <textarea {...register('description')} className="ef-input" rows={3} style={{ resize: 'vertical' }} />
+            </div>
 
-        <div style={styles.row}>
-          <div style={styles.field}>
-            <label htmlFor="city" style={styles.label}>Ciudad *</label>
-            <input id="city" type="text" {...register('city')} style={styles.input} />
-            {errors.city && <span style={styles.errorMsg}>{errors.city.message}</span>}
+            <div style={styles.field}>
+              <label className="ef-label">Categoría</label>
+              <select {...register('categoryId', { setValueAs: v => v === '' ? undefined : Number(v) })} className="ef-input">
+                <option value="">Sin categoría</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.field}>
+              <label className="ef-label">Lugar *</label>
+              <input type="text" {...register('venue')} className="ef-input" placeholder="Nombre del lugar" />
+              {errors.venue && <span className="ef-error">{errors.venue.message}</span>}
+            </div>
+
+            <div style={styles.row}>
+              <div style={styles.field}>
+                <label className="ef-label">Ciudad *</label>
+                <input type="text" {...register('city')} className="ef-input" />
+                {errors.city && <span className="ef-error">{errors.city.message}</span>}
+              </div>
+              <div style={styles.field}>
+                <label className="ef-label">País *</label>
+                <input type="text" {...register('country')} className="ef-input" list="country-list" />
+                <datalist id="country-list">
+                  {COUNTRIES.map((c) => <option key={c} value={c} />)}
+                </datalist>
+                {errors.country && <span className="ef-error">{errors.country.message}</span>}
+              </div>
+            </div>
+
+            <div style={styles.row}>
+              <div style={styles.field}>
+                <label className="ef-label">Fecha de inicio *</label>
+                <input type="date" min={todayStr()} {...register('startDate')} className="ef-input" />
+                {errors.startDate && <span className="ef-error">{errors.startDate.message}</span>}
+              </div>
+              <div style={styles.field}>
+                <label className="ef-label">Fecha de fin</label>
+                <input type="date" min={todayStr()} {...register('endDate')} className="ef-input" />
+                {errors.endDate && <span className="ef-error">{errors.endDate.message}</span>}
+              </div>
+            </div>
+
+            <div style={styles.field}>
+              <label className="ef-label">URL de imagen</label>
+              <input type="url" {...register('imageUrl')} className="ef-input" placeholder="https://..." />
+              {errors.imageUrl && <span className="ef-error">{errors.imageUrl.message}</span>}
+              {isUrl(imageUrl) && <ImagePreview key={imageUrl} url={imageUrl} />}
+            </div>
           </div>
-          <div style={styles.field}>
-            <label htmlFor="country" style={styles.label}>País *</label>
-            <input id="country" type="text" {...register('country')} style={styles.input} />
-            {errors.country && <span style={styles.errorMsg}>{errors.country.message}</span>}
-          </div>
-        </div>
+        </section>
 
-        <div style={styles.row}>
-          <div style={styles.field}>
-            <label htmlFor="startDate" style={styles.label}>Fecha de inicio *</label>
-            <input id="startDate" type="date" {...register('startDate')} style={styles.input} />
-            {errors.startDate && <span style={styles.errorMsg}>{errors.startDate.message}</span>}
+        {/* ── Tipos de ticket ── */}
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <h2 style={styles.sectionTitle}>Tipos de ticket</h2>
+              <p style={styles.sectionSub}>Podés agregar más tipos después de crear el evento.</p>
+            </div>
+            {!showTicketForm && (
+              <button type="button" className="ef-btn-ghost" style={styles.addBtn} onClick={() => setShowTicketForm(true)}>
+                + Agregar tipo
+              </button>
+            )}
           </div>
-          <div style={styles.field}>
-            <label htmlFor="endDate" style={styles.label}>Fecha de fin</label>
-            <input id="endDate" type="date" {...register('endDate')} style={styles.input} />
-          </div>
-        </div>
 
-        <div style={styles.field}>
-          <label htmlFor="imageUrl" style={styles.label}>URL de imagen</label>
-          <input id="imageUrl" type="url" {...register('imageUrl')} style={styles.input} placeholder="https://..." />
-          {errors.imageUrl && <span style={styles.errorMsg}>{errors.imageUrl.message}</span>}
-        </div>
+          {showTicketForm && (
+            <div style={styles.ticketFormBox}>
+              <TicketTypeForm onAdd={handleAddTicket} onCancel={() => setShowTicketForm(false)} />
+            </div>
+          )}
 
+          {ticketTypes.length === 0 && !showTicketForm ? (
+            <p style={styles.emptyTickets}>Sin tipos de ticket. Los compradores no podrán adquirir entradas hasta que agregues al menos uno.</p>
+          ) : (
+            <div style={styles.ticketList}>
+              {ticketTypes.map((tt, i) => (
+                <div key={i} style={styles.ticketCard}>
+                  <div style={styles.ticketInfo}>
+                    <span style={styles.ticketName}>{tt.name}</span>
+                    <span style={styles.ticketDetail}>
+                      {tt.currency} {tt.price.toFixed(2)} · {tt.totalQuantity} unidades
+                    </span>
+                    {tt.description && <span style={styles.ticketDesc}>{tt.description}</span>}
+                    {(tt.saleStartDate || tt.saleEndDate) && (
+                      <span style={styles.ticketSaleDates}>
+                        Venta:{' '}
+                        {tt.saleStartDate
+                          ? `desde ${new Date(tt.saleStartDate).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                          : 'ya abierta'
+                        }
+                        {tt.saleEndDate
+                          ? ` · hasta ${new Date(tt.saleEndDate).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                          : ''
+                        }
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="ef-btn-danger"
+                    style={styles.removeBtn}
+                    onClick={() => handleRemoveTicket(i)}
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Acciones ── */}
         <div style={styles.formActions}>
-          <button
-            type="button"
-            style={styles.cancelBtn}
-            onClick={() => navigate('/my-events')}
-          >
+          <button type="button" className="ef-btn-ghost" onClick={() => navigate('/my-events')}>
             Cancelar
           </button>
-          <button type="submit" style={styles.submitBtn} disabled={isPending}>
+          <button type="submit" className="ef-btn" disabled={isPending}>
             {isPending ? 'Creando...' : 'Crear evento'}
           </button>
         </div>
@@ -131,19 +365,42 @@ export const CreateEventPage = () => {
   )
 }
 
+// ── Styles ───────────────────────────────────────────────────────────────────
+
 const styles: Record<string, React.CSSProperties> = {
-  container: { maxWidth: '720px', margin: '0 auto', padding: '2rem 1rem' },
-  header: { marginBottom: '1.5rem' },
-  backBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#3182ce', fontSize: '0.9rem', padding: 0, marginBottom: '0.75rem', display: 'block' },
-  heading: { fontSize: '1.75rem', fontWeight: 700 },
-  form: { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
-  field: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-  label: { fontWeight: 500, fontSize: '0.9rem', color: '#4a5568' },
-  input: { padding: '0.5rem', fontSize: '1rem', borderRadius: '4px', border: '1px solid #cbd5e0' },
-  textarea: { padding: '0.5rem', fontSize: '1rem', borderRadius: '4px', border: '1px solid #cbd5e0', resize: 'vertical' },
-  errorMsg: { color: '#e53e3e', fontSize: '0.82rem' },
-  formActions: { display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' },
-  cancelBtn: { padding: '0.6rem 1.25rem', border: '1px solid #cbd5e0', borderRadius: '4px', background: '#fff', cursor: 'pointer' },
-  submitBtn: { padding: '0.6rem 1.5rem', background: '#3182ce', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 },
+  container:    { maxWidth: '720px', margin: '0 auto' },
+  header:       { marginBottom: '1.5rem' },
+  back:         { background: 'none', border: 'none', cursor: 'pointer', color: t.accent, fontSize: '0.9rem', padding: 0, marginBottom: '0.75rem', display: 'block', fontWeight: 500 },
+  heading:      { fontSize: '1.75rem', fontWeight: 700, color: t.text },
+  form:         { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  section:      { background: t.surface, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '1.5rem' },
+  sectionHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' },
+  sectionTitle: { fontSize: '1rem', fontWeight: 600, color: t.text, marginBottom: '0.2rem' },
+  sectionSub:   { fontSize: '0.8rem', color: t.textDim, margin: 0 },
+  fields:       { display: 'flex', flexDirection: 'column', gap: '1.125rem' },
+  row:          { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
+  field:        { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  addBtn:       { padding: '0.45rem 1rem', fontSize: '0.875rem', whiteSpace: 'nowrap', flexShrink: 0 },
+  ticketFormBox:{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '1.125rem', marginBottom: '0.875rem' },
+  ticketList:   { display: 'flex', flexDirection: 'column', gap: '0.625rem', marginTop: '0.75rem' },
+  ticketCard:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.875rem 1rem' },
+  ticketInfo:   { display: 'flex', flexDirection: 'column', gap: '0.2rem' },
+  ticketName:   { fontWeight: 600, color: t.text, fontSize: '0.95rem' },
+  ticketDetail: { color: t.accent, fontSize: '0.85rem', fontWeight: 500 },
+  ticketDesc:     { color: t.textMuted, fontSize: '0.8rem' },
+  ticketSaleDates:{ color: t.textDim, fontSize: '0.78rem', fontStyle: 'italic' },
+  removeBtn:    { padding: '0.3rem 0.7rem', fontSize: '0.78rem', flexShrink: 0 },
+  emptyTickets: { color: t.textDim, fontSize: '0.85rem', lineHeight: 1.5, marginTop: '0.5rem' },
+  formActions:  { display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' },
+}
+
+const ttStyles: Record<string, React.CSSProperties> = {
+  form:      { display: 'flex', flexDirection: 'column', gap: '0.875rem' },
+  labelHint: { fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' },
+  grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 0.8fr', gap: '0.75rem' },
+  dateRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
+  field:   { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  hint:    { margin: 0, fontSize: '0.78rem', color: t.textDim, lineHeight: 1.5, padding: '0.5rem 0.75rem', background: `${t.accent}0D`, borderRadius: '6px', borderLeft: `3px solid ${t.accent}40` },
+  actions: { display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' },
+  btn:     { padding: '0.4rem 1rem', fontSize: '0.875rem' },
 }

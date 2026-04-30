@@ -33,37 +33,36 @@ export const RegisterForm = () => {
     <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
       <div style={styles.row}>
         <div style={styles.field}>
-          <label htmlFor="firstName">Nombre</label>
-          <input id="firstName" type="text" {...register('firstName')} style={styles.input} />
-          {errors.firstName && <span style={styles.error}>{errors.firstName.message}</span>}
+          <label htmlFor="firstName" className="ef-label">Nombre</label>
+          <input id="firstName" type="text" {...register('firstName')} className="ef-input" placeholder="Juan" />
+          {errors.firstName && <span className="ef-error">{errors.firstName.message}</span>}
         </div>
-
         <div style={styles.field}>
-          <label htmlFor="lastName">Apellido</label>
-          <input id="lastName" type="text" {...register('lastName')} style={styles.input} />
-          {errors.lastName && <span style={styles.error}>{errors.lastName.message}</span>}
+          <label htmlFor="lastName" className="ef-label">Apellido</label>
+          <input id="lastName" type="text" {...register('lastName')} className="ef-input" placeholder="Pérez" />
+          {errors.lastName && <span className="ef-error">{errors.lastName.message}</span>}
         </div>
       </div>
 
       <div style={styles.field}>
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" {...register('email')} style={styles.input} />
-        {errors.email && <span style={styles.error}>{errors.email.message}</span>}
+        <label htmlFor="email" className="ef-label">Email</label>
+        <input id="email" type="email" {...register('email')} className="ef-input" placeholder="tu@email.com" />
+        {errors.email && <span className="ef-error">{errors.email.message}</span>}
       </div>
 
       <div style={styles.field}>
-        <label htmlFor="password">Contraseña</label>
-        <input id="password" type="password" {...register('password')} style={styles.input} />
-        {errors.password && <span style={styles.error}>{errors.password.message}</span>}
+        <label htmlFor="password" className="ef-label">Contraseña</label>
+        <input id="password" type="password" {...register('password')} className="ef-input" placeholder="••••••••" />
+        {errors.password && <span className="ef-error">{errors.password.message}</span>}
       </div>
 
       <div style={styles.field}>
-        <label htmlFor="confirmPassword">Confirmar contraseña</label>
-        <input id="confirmPassword" type="password" {...register('confirmPassword')} style={styles.input} />
-        {errors.confirmPassword && <span style={styles.error}>{errors.confirmPassword.message}</span>}
+        <label htmlFor="confirmPassword" className="ef-label">Confirmar contraseña</label>
+        <input id="confirmPassword" type="password" {...register('confirmPassword')} className="ef-input" placeholder="••••••••" />
+        {errors.confirmPassword && <span className="ef-error">{errors.confirmPassword.message}</span>}
       </div>
 
-      <button type="submit" disabled={isLoading} style={styles.button}>
+      <button type="submit" disabled={isLoading} className="ef-btn ef-btn-full" style={{ marginTop: '0.5rem' }}>
         {isLoading ? 'Registrando...' : 'Crear cuenta'}
       </button>
     </form>
@@ -71,10 +70,7 @@ export const RegisterForm = () => {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  form: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
-  field: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-  input: { padding: '0.5rem', fontSize: '1rem', borderRadius: '4px', border: '1px solid #ccc' },
-  error: { color: '#e53e3e', fontSize: '0.85rem' },
-  button: { padding: '0.75rem', fontSize: '1rem', cursor: 'pointer', borderRadius: '4px', border: 'none', background: '#3182ce', color: '#fff' },
+  form:  { display: 'flex', flexDirection: 'column', gap: '1rem' },
+  row:   { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
+  field: { display: 'flex', flexDirection: 'column' },
 }
