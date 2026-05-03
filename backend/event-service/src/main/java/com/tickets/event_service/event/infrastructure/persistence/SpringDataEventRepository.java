@@ -19,15 +19,15 @@ interface SpringDataEventRepository extends JpaRepository<EventJpaEntity, UUID> 
     @Query(value = "SELECT e FROM EventJpaEntity e LEFT JOIN FETCH e.category " +
                    "WHERE e.status = :status " +
                    "AND (:categoryId IS NULL OR e.category.id = :categoryId) " +
-                   "AND (:search IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-                   "AND (:city IS NULL OR LOWER(e.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
-                   "AND (:venue IS NULL OR LOWER(e.venue) LIKE LOWER(CONCAT('%', :venue, '%')))",
+                   "AND (:search = '' OR LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                   "AND (:city = '' OR LOWER(e.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
+                   "AND (:venue = '' OR LOWER(e.venue) LIKE LOWER(CONCAT('%', :venue, '%')))",
            countQuery = "SELECT COUNT(e) FROM EventJpaEntity e " +
                         "WHERE e.status = :status " +
                         "AND (:categoryId IS NULL OR e.category.id = :categoryId) " +
-                        "AND (:search IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-                        "AND (:city IS NULL OR LOWER(e.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
-                        "AND (:venue IS NULL OR LOWER(e.venue) LIKE LOWER(CONCAT('%', :venue, '%')))")
+                        "AND (:search = '' OR LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                        "AND (:city = '' OR LOWER(e.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
+                        "AND (:venue = '' OR LOWER(e.venue) LIKE LOWER(CONCAT('%', :venue, '%')))")
     Page<EventJpaEntity> findAllByFilters(
             @Param("status") EventStatus status,
             @Param("categoryId") Long categoryId,

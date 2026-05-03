@@ -47,9 +47,9 @@ public class JpaEventRepository implements EventRepository {
     public PageResult<Event> findPublished(EventStatus status, Long categoryId, String search, String city, String venue, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("startDate").ascending());
 
-        String normalizedSearch = (search != null && !search.isBlank()) ? search.trim() : null;
-        String normalizedCity   = (city   != null && !city.isBlank())   ? city.trim()   : null;
-        String normalizedVenue  = (venue  != null && !venue.isBlank())  ? venue.trim()  : null;
+        String normalizedSearch = (search != null && !search.isBlank()) ? search.trim() : "";
+        String normalizedCity   = (city   != null && !city.isBlank())   ? city.trim()   : "";
+        String normalizedVenue  = (venue  != null && !venue.isBlank())  ? venue.trim()  : "";
 
         Page<EventJpaEntity> result = springData.findAllByFilters(
                 status, categoryId, normalizedSearch, normalizedCity, normalizedVenue, pageable);

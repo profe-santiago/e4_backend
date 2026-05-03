@@ -40,13 +40,15 @@ const eventSchema = z.object({
 })
 
 const ticketSchema = z.object({
-  name:          z.string().min(1, 'Requerido').max(100),
-  description:   z.string().optional(),
-  price:         z.number().min(0, 'No puede ser negativo'),
-  currency:      z.string().length(3),
-  totalQuantity: z.number().int().min(1, 'Mínimo 1'),
-  saleStartDate: z.string().optional(),
-  saleEndDate:   z.string().optional(),
+  name:           z.string().min(1, 'Requerido').max(100),
+  description:    z.string().optional(),
+  price:          z.number().min(0, 'No puede ser negativo'),
+  currency:       z.string().length(3),
+  totalQuantity:  z.number().int().min(1, 'Mínimo 1'),
+  saleStartDate:  z.string().optional(),
+  saleStartTime:  z.string().optional(),
+  saleEndDate:    z.string().optional(),
+  saleEndTime:    z.string().optional(),
 })
 
 type EventFormValues = z.infer<typeof eventSchema>
@@ -65,7 +67,10 @@ const STATUS_COLOR: Record<EventStatus, string> = {
 }
 
 const toDateInput = (isoStr: string): string => isoStr ? isoStr.split('T')[0] : ''
-const toDateTimeInput = (isoStr?: string | null): string => isoStr ? isoStr.slice(0, 16) : ''
+const toDatePart  = (isoStr?: string | null): string => isoStr ? isoStr.slice(0, 10) : ''
+const toTimePart  = (isoStr?: string | null): string => isoStr ? isoStr.slice(11, 16) : ''
+const combineDT   = (date?: string, time?: string, defaultTime = '00:00') =>
+  date ? `${date}T${time || defaultTime}` : undefined
 
 const TicketTypeForm = ({
   onSave, onCancel, initial, isPending,
@@ -83,8 +88,10 @@ const TicketTypeForm = ({
       price:         initial?.price ?? 0,
       currency:      initial?.currency ?? 'USD',
       totalQuantity: initial?.totalQuantity ?? 1,
-      saleStartDate: toDateTimeInput(initial?.saleStartDate),
-      saleEndDate:   toDateTimeInput(initial?.saleEndDate),
+      saleStartDate: toDatePart(initial?.saleStartDate),
+      saleStartTime: toTimePart(initial?.saleStartDate) || '00:00',
+      saleEndDate:   toDatePart(initial?.saleEndDate),
+      saleEndTime:   toTimePart(initial?.saleEndDate) || '23:59',
     },
   })
 
@@ -94,19 +101,19 @@ const TicketTypeForm = ({
 
     const values = getValues()
     const now = new Date()
-    const toDate = (s: string) => new Date(s.length === 10 ? `${s}T00:00` : s)
+    const toDT = (date?: string, time?: string) => new Date(`${date}T${time || '00:00'}`)
 
-    if (values.saleStartDate && toDate(values.saleStartDate) < now) {
+    if (values.saleStartDate && toDT(values.saleStartDate, values.saleStartTime) < now) {
       setError('saleStartDate', { message: 'No puede ser una fecha pasada' })
       return
     }
-    if (values.saleEndDate && toDate(values.saleEndDate) < now) {
+    if (values.saleEndDate && toDT(values.saleEndDate, values.saleEndTime) < now) {
       setError('saleEndDate', { message: 'No puede ser una fecha pasada' })
       return
     }
     if (values.saleStartDate && values.saleEndDate &&
-        toDate(values.saleEndDate) <= toDate(values.saleStartDate)) {
-      setError('saleEndDate', { message: 'Debe ser posterior al inicio. Si es el mismo día, la hora debe ser mayor' })
+        toDT(values.saleEndDate, values.saleEndTime) <= toDT(values.saleStartDate, values.saleStartTime)) {
+      setError('saleEndDate', { message: 'Debe ser posterior al inicio de venta' })
       return
     }
 
@@ -146,18 +153,26 @@ const TicketTypeForm = ({
       </div>
       <div style={ttStyles.dateRow}>
         <div style={ttStyles.field}>
-          <label className="ef-label">Inicio de venta <span style={ttStyles.labelHint}>(fecha y hora)</span></label>
-          <input type="datetime-local" {...register('saleStartDate')} className="ef-input" />
+          <label className="ef-label">Inicio de venta</label>
+          <div style={ttStyles.dateTimeRow}>
+            <input type="date" {...register('saleStartDate')} className="ef-input" style={{ flex: 2 }} />
+            <input type="time" {...register('saleStartTime')} className="ef-input" style={{ flex: 1 }} />
+          </div>
+          <span style={ttStyles.labelHint}>Hora · por defecto: inicio del día</span>
           {errors.saleStartDate && <span className="ef-error">{errors.saleStartDate.message}</span>}
         </div>
         <div style={ttStyles.field}>
-          <label className="ef-label">Cierre de venta <span style={ttStyles.labelHint}>(fecha y hora)</span></label>
-          <input type="datetime-local" {...register('saleEndDate')} className="ef-input" />
+          <label className="ef-label">Cierre de venta</label>
+          <div style={ttStyles.dateTimeRow}>
+            <input type="date" {...register('saleEndDate')} className="ef-input" style={{ flex: 2 }} />
+            <input type="time" {...register('saleEndTime')} className="ef-input" style={{ flex: 1 }} />
+          </div>
+          <span style={ttStyles.labelHint}>Hora · por defecto: fin del día</span>
           {errors.saleEndDate && <span className="ef-error">{errors.saleEndDate.message}</span>}
         </div>
       </div>
       <p style={ttStyles.hint}>
-        Si no configurás fechas de venta, se usarán las fechas del evento: la venta abrirá de inmediato y cerrará al inicio del evento.
+        Si no configuras fechas de venta, la venta abrirá de inmediato y cerrará al inicio del evento.
       </p>
       <div style={ttStyles.actions}>
         <button type="button" className="ef-btn-ghost" style={ttStyles.btn} onClick={onCancel}>
@@ -252,8 +267,8 @@ export const EditEventPage = () => {
       price:         values.price,
       currency:      values.currency || 'ARS',
       totalQuantity: values.totalQuantity,
-      saleStartDate: values.saleStartDate || undefined,
-      saleEndDate:   values.saleEndDate   || undefined,
+      saleStartDate: combineDT(values.saleStartDate, values.saleStartTime, '00:00'),
+      saleEndDate:   combineDT(values.saleEndDate,   values.saleEndTime,   '23:59'),
     }
     createTicketType.mutate(request, { onSuccess: () => setShowTicketForm(false) })
   }
@@ -269,8 +284,8 @@ export const EditEventPage = () => {
           price:         values.price,
           currency:      values.currency || 'ARS',
           totalQuantity: values.totalQuantity,
-          saleStartDate: values.saleStartDate || undefined,
-          saleEndDate:   values.saleEndDate   || undefined,
+          saleStartDate: combineDT(values.saleStartDate, values.saleStartTime, '00:00'),
+          saleEndDate:   combineDT(values.saleEndDate,   values.saleEndTime,   '23:59'),
         },
       },
       { onSuccess: () => setEditingTicket(null) },
@@ -550,8 +565,9 @@ const ttStyles: Record<string, React.CSSProperties> = {
   form:      { display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' },
   labelHint: { fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' },
   grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 0.6fr 0.8fr', gap: '0.75rem' },
-  dateRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
-  field:   { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  dateRow:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
+  dateTimeRow: { display: 'flex', gap: '0.5rem' },
+  field:       { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
   hint:    { margin: 0, fontSize: '0.78rem', color: t.textDim, lineHeight: 1.5, padding: '0.5rem 0.75rem', background: `${t.accent}0D`, borderRadius: '6px', borderLeft: `3px solid ${t.accent}40` },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' },
   btn:     { padding: '0.4rem 1rem', fontSize: '0.875rem' },

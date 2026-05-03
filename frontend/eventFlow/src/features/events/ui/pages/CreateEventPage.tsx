@@ -50,8 +50,13 @@ const ticketSchema = z.object({
   currency:      z.string().length(3),
   totalQuantity: z.number().int().min(1, 'Mínimo 1'),
   saleStartDate: z.string().optional(),
+  saleStartTime: z.string().optional(),
   saleEndDate:   z.string().optional(),
+  saleEndTime:   z.string().optional(),
 })
+
+const combineDT = (date?: string, time?: string, defaultTime = '00:00') =>
+  date ? `${date}T${time || defaultTime}` : undefined
 
 type EventFormValues = z.infer<typeof eventSchema>
 type TicketFormValues = z.infer<typeof ticketSchema>
@@ -61,7 +66,7 @@ type TicketFormValues = z.infer<typeof ticketSchema>
 const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => void; onCancel: () => void }) => {
   const { register, trigger, setError, getValues, reset, formState: { errors } } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
-    defaultValues: { currency: 'USD', totalQuantity: 1, price: 0 },
+    defaultValues: { currency: 'USD', totalQuantity: 1, price: 0, saleStartTime: '00:00', saleEndTime: '23:59' },
   })
 
   const handleClickAgregar = async () => {
@@ -70,24 +75,24 @@ const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => v
 
     const values = getValues()
     const now = new Date()
-    const toDate = (s: string) => new Date(s.length === 10 ? `${s}T00:00` : s)
+    const toDT = (date?: string, time?: string) => new Date(`${date}T${time || '00:00'}`)
 
-    if (values.saleStartDate && toDate(values.saleStartDate) < now) {
+    if (values.saleStartDate && toDT(values.saleStartDate, values.saleStartTime) < now) {
       setError('saleStartDate', { message: 'No puede ser una fecha pasada' })
       return
     }
-    if (values.saleEndDate && toDate(values.saleEndDate) < now) {
+    if (values.saleEndDate && toDT(values.saleEndDate, values.saleEndTime) < now) {
       setError('saleEndDate', { message: 'No puede ser una fecha pasada' })
       return
     }
     if (values.saleStartDate && values.saleEndDate &&
-        toDate(values.saleEndDate) <= toDate(values.saleStartDate)) {
-      setError('saleEndDate', { message: 'Debe ser posterior al inicio. Si es el mismo día, la hora debe ser mayor' })
+        toDT(values.saleEndDate, values.saleEndTime) <= toDT(values.saleStartDate, values.saleStartTime)) {
+      setError('saleEndDate', { message: 'Debe ser posterior al inicio de venta' })
       return
     }
 
     onAdd(values)
-    reset({ currency: 'ARS', totalQuantity: 1, price: 0 })
+    reset({ currency: 'ARS', totalQuantity: 1, price: 0, saleStartTime: '00:00', saleEndTime: '23:59' })
   }
 
   return (
@@ -123,18 +128,26 @@ const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => v
       </div>
       <div style={ttStyles.dateRow}>
         <div style={ttStyles.field}>
-          <label className="ef-label">Inicio de venta <span style={ttStyles.labelHint}>(fecha y hora)</span></label>
-          <input type="datetime-local" min={nowStr()} {...register('saleStartDate')} className="ef-input" />
+          <label className="ef-label">Inicio de venta</label>
+          <div style={ttStyles.dateTimeRow}>
+            <input type="date" {...register('saleStartDate')} className="ef-input" style={{ flex: 2 }} />
+            <input type="time" {...register('saleStartTime')} className="ef-input" style={{ flex: 1 }} />
+          </div>
+          <span style={ttStyles.labelHint}>Hora · por defecto: inicio del día</span>
           {errors.saleStartDate && <span className="ef-error">{errors.saleStartDate.message}</span>}
         </div>
         <div style={ttStyles.field}>
-          <label className="ef-label">Cierre de venta <span style={ttStyles.labelHint}>(fecha y hora)</span></label>
-          <input type="datetime-local" min={nowStr()} {...register('saleEndDate')} className="ef-input" />
+          <label className="ef-label">Cierre de venta</label>
+          <div style={ttStyles.dateTimeRow}>
+            <input type="date" {...register('saleEndDate')} className="ef-input" style={{ flex: 2 }} />
+            <input type="time" {...register('saleEndTime')} className="ef-input" style={{ flex: 1 }} />
+          </div>
+          <span style={ttStyles.labelHint}>Hora · por defecto: fin del día</span>
           {errors.saleEndDate && <span className="ef-error">{errors.saleEndDate.message}</span>}
         </div>
       </div>
       <p style={ttStyles.hint}>
-        Si no configurás fechas de venta, se usarán las fechas del evento: la venta abrirá de inmediato y cerrará al inicio del evento.
+        Si no configuras fechas de venta, la venta abrirá de inmediato y cerrará al inicio del evento.
       </p>
       <div style={ttStyles.actions}>
         <button type="button" className="ef-btn-ghost" style={ttStyles.btn} onClick={onCancel}>
@@ -218,8 +231,8 @@ export const CreateEventPage = () => {
               price:         tt.price,
               currency:      tt.currency,
               totalQuantity: tt.totalQuantity,
-              saleStartDate: tt.saleStartDate || undefined,
-              saleEndDate:   tt.saleEndDate   || undefined,
+              saleStartDate: combineDT(tt.saleStartDate, tt.saleStartTime, '00:00'),
+              saleEndDate:   combineDT(tt.saleEndDate,   tt.saleEndTime,   '23:59'),
             }
             return useCase.execute(event.id, req)
           }),
@@ -442,8 +455,9 @@ const ttStyles: Record<string, React.CSSProperties> = {
   form:      { display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' },
   labelHint: { fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' },
   grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 0.6fr 0.8fr', gap: '0.75rem' },
-  dateRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
-  field:   { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  dateRow:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
+  dateTimeRow: { display: 'flex', gap: '0.5rem' },
+  field:       { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
   hint:    { margin: 0, fontSize: '0.78rem', color: t.textDim, lineHeight: 1.5, padding: '0.5rem 0.75rem', background: `${t.accent}0D`, borderRadius: '6px', borderLeft: `3px solid ${t.accent}40` },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' },
   btn:     { padding: '0.4rem 1rem', fontSize: '0.875rem' },
