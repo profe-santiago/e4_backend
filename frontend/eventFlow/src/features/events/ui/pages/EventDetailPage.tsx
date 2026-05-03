@@ -1,6 +1,8 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useEventDetail } from '../hooks/useEventDetail'
 import { useTicketTypesByEvent } from '../hooks/useTicketTypesByEvent'
+import { useAuthStore } from '@/store/auth.store'
 import { t } from '@/shared/config/theme'
 
 const formatDate = (iso: string) =>
@@ -25,8 +27,10 @@ const getTicketSaleStatus = (
 export const EventDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { data: event, isLoading, isError } = useEventDetail(id ?? '')
   const { data: ticketTypes = [] } = useTicketTypesByEvent(id ?? '')
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false)
 
   if (isLoading) return <div style={styles.feedback}>Cargando evento...</div>
   if (isError || !event) return <div style={styles.error}>No se pudo cargar el evento.</div>
@@ -102,7 +106,13 @@ export const EventDetailPage = () => {
                       <button
                         className="ef-btn"
                         disabled={!canBuy}
-                        onClick={() => navigate(`/events/${event.id}/checkout`, { state: { ticketTypeId: tt.id } })}
+                        onClick={() => {
+                          if (!isAuthenticated) {
+                            setShowAuthPrompt(true)
+                            return
+                          }
+                          navigate(`/events/${event.id}/checkout`, { state: { ticketTypeId: tt.id } })
+                        }}
                       >
                         {canBuy ? 'Comprar' : saleStatus === 'not-started' ? 'Próximamente' : 'No disponible'}
                       </button>
@@ -111,6 +121,29 @@ export const EventDetailPage = () => {
                 )
               })}
             </div>
+
+            {showAuthPrompt && (
+              <div style={styles.authPrompt}>
+                <div style={styles.authPromptIcon}>🔒</div>
+                <div style={styles.authPromptBody}>
+                  <p style={styles.authPromptTitle}>Iniciá sesión para comprar</p>
+                  <p style={styles.authPromptSub}>
+                    Necesitás una cuenta para adquirir entradas y gestionar tus compras.
+                  </p>
+                  <div style={styles.authPromptActions}>
+                    <Link to="/login" state={{ from: `/events/${id}` }} className="ef-btn" style={{ textDecoration: 'none', textAlign: 'center' }}>
+                      Iniciar sesión
+                    </Link>
+                    <Link to="/register" state={{ from: `/events/${id}` }} className="ef-btn-ghost" style={{ textDecoration: 'none', textAlign: 'center' }}>
+                      Crear cuenta
+                    </Link>
+                    <button className="ef-btn-ghost" style={{ color: t.textDim, borderColor: 'transparent' }} onClick={() => setShowAuthPrompt(false)}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
         )}
       </div>
@@ -149,4 +182,43 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.9rem',
     fontWeight: 500,
   }),
+  authPrompt: {
+    marginTop: '1.25rem',
+    display: 'flex',
+    gap: '1rem',
+    alignItems: 'flex-start',
+    background: `${t.accent}0F`,
+    border: `1px solid ${t.accent}35`,
+    borderRadius: '10px',
+    padding: '1.25rem 1.5rem',
+  } as React.CSSProperties,
+  authPromptIcon: {
+    fontSize: '1.5rem',
+    flexShrink: 0,
+    marginTop: '0.1rem',
+  } as React.CSSProperties,
+  authPromptBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.4rem',
+    flex: 1,
+  } as React.CSSProperties,
+  authPromptTitle: {
+    margin: 0,
+    fontWeight: 700,
+    fontSize: '0.975rem',
+    color: t.text,
+  } as React.CSSProperties,
+  authPromptSub: {
+    margin: 0,
+    fontSize: '0.85rem',
+    color: t.textMuted,
+    lineHeight: 1.5,
+  } as React.CSSProperties,
+  authPromptActions: {
+    display: 'flex',
+    gap: '0.625rem',
+    marginTop: '0.75rem',
+    flexWrap: 'wrap' as const,
+  } as React.CSSProperties,
 }

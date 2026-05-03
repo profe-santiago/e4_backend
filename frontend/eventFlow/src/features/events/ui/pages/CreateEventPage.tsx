@@ -51,18 +51,6 @@ const ticketSchema = z.object({
   totalQuantity: z.number().int().min(1, 'Mínimo 1'),
   saleStartDate: z.string().optional(),
   saleEndDate:   z.string().optional(),
-}).superRefine((data, ctx) => {
-  const now = new Date()
-  if (data.saleStartDate && new Date(data.saleStartDate) < now) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No puede ser una fecha pasada', path: ['saleStartDate'] })
-  }
-  if (data.saleEndDate && new Date(data.saleEndDate) < now) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No puede ser una fecha pasada', path: ['saleEndDate'] })
-  }
-  if (data.saleStartDate && data.saleEndDate &&
-      new Date(data.saleEndDate) <= new Date(data.saleStartDate)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe ser posterior al inicio de venta', path: ['saleEndDate'] })
-  }
 })
 
 type EventFormValues = z.infer<typeof eventSchema>
@@ -71,12 +59,33 @@ type TicketFormValues = z.infer<typeof ticketSchema>
 // ── Ticket type form (NOT a <form> to avoid nesting inside the event form) ───
 
 const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => void; onCancel: () => void }) => {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<TicketFormValues>({
+  const { register, trigger, setError, getValues, reset, formState: { errors } } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
     defaultValues: { currency: 'USD', totalQuantity: 1, price: 0 },
   })
 
-  const onSubmit = (values: TicketFormValues) => {
+  const handleClickAgregar = async () => {
+    const isValid = await trigger()
+    if (!isValid) return
+
+    const values = getValues()
+    const now = new Date()
+    const toDate = (s: string) => new Date(s.length === 10 ? `${s}T00:00` : s)
+
+    if (values.saleStartDate && toDate(values.saleStartDate) < now) {
+      setError('saleStartDate', { message: 'No puede ser una fecha pasada' })
+      return
+    }
+    if (values.saleEndDate && toDate(values.saleEndDate) < now) {
+      setError('saleEndDate', { message: 'No puede ser una fecha pasada' })
+      return
+    }
+    if (values.saleStartDate && values.saleEndDate &&
+        toDate(values.saleEndDate) <= toDate(values.saleStartDate)) {
+      setError('saleEndDate', { message: 'Debe ser posterior al inicio. Si es el mismo día, la hora debe ser mayor' })
+      return
+    }
+
     onAdd(values)
     reset({ currency: 'ARS', totalQuantity: 1, price: 0 })
   }
@@ -131,7 +140,7 @@ const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => v
         <button type="button" className="ef-btn-ghost" style={ttStyles.btn} onClick={onCancel}>
           Cancelar
         </button>
-        <button type="button" className="ef-btn" style={ttStyles.btn} onClick={handleSubmit(onSubmit)}>
+        <button type="button" className="ef-btn" style={ttStyles.btn} onClick={handleClickAgregar}>
           Agregar tipo
         </button>
       </div>
@@ -151,11 +160,34 @@ export const CreateEventPage = () => {
   const [ticketTypes, setTicketTypes] = useState<TicketFormValues[]>([])
   const [showTicketForm, setShowTicketForm] = useState(false)
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<EventFormValues>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
   })
 
   const imageUrl = watch('imageUrl') ?? ''
+  const [uploading, setUploading] = useState(false)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Formato no permitido. Usá JPEG, PNG o WEBP.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen supera el límite de 5 MB.')
+      return
+    }
+    setUploading(true)
+    try {
+      const url = await eventRepository.uploadImage(file)
+      setValue('imageUrl', url, { shouldValidate: true })
+    } catch {
+      toast.error('Error al subir la imagen. Intentá de nuevo.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const { mutateAsync: createEvent, isPending } = useMutation({
     mutationFn: (req: Parameters<CreateEventUseCase['execute']>[0]) =>
@@ -283,8 +315,18 @@ export const CreateEventPage = () => {
             </div>
 
             <div style={styles.field}>
-              <label className="ef-label">URL de imagen</label>
-              <input type="url" {...register('imageUrl')} className="ef-input" placeholder="https://..." />
+              <label className="ef-label">Imagen del evento</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="ef-input"
+                onChange={handleImageUpload}
+                disabled={uploading}
+                style={{ cursor: uploading ? 'not-allowed' : 'pointer' }}
+              />
+              <span style={styles.uploadHint}>
+                {uploading ? 'Subiendo imagen...' : 'Formatos: JPEG, PNG, WEBP · Máximo 5 MB'}
+              </span>
               {errors.imageUrl && <span className="ef-error">{errors.imageUrl.message}</span>}
               {isUrl(imageUrl) && <ImagePreview key={imageUrl} url={imageUrl} />}
             </div>
@@ -292,7 +334,7 @@ export const CreateEventPage = () => {
         </section>
 
         {/* ── Tipos de ticket ── */}
-        <section style={styles.section}>
+        <section style={styles.ticketSection}>
           <div style={styles.sectionHeader}>
             <div>
               <h2 style={styles.sectionTitle}>Tipos de ticket</h2>
@@ -374,16 +416,17 @@ const styles: Record<string, React.CSSProperties> = {
   heading:      { fontSize: '1.75rem', fontWeight: 700, color: t.text },
   form:         { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
   section:      { background: t.surface, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '1.5rem' },
-  sectionHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' },
-  sectionTitle: { fontSize: '1rem', fontWeight: 600, color: t.text, marginBottom: '0.2rem' },
+  ticketSection:{ borderTop: `1px solid ${t.border}`, paddingTop: '1.75rem' },
+  sectionHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
+  sectionTitle: { fontSize: '1.15rem', fontWeight: 600, color: t.text },
   sectionSub:   { fontSize: '0.8rem', color: t.textDim, margin: 0 },
   fields:       { display: 'flex', flexDirection: 'column', gap: '1.125rem' },
   row:          { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
   field:        { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
   addBtn:       { padding: '0.45rem 1rem', fontSize: '0.875rem', whiteSpace: 'nowrap', flexShrink: 0 },
-  ticketFormBox:{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '1.125rem', marginBottom: '0.875rem' },
-  ticketList:   { display: 'flex', flexDirection: 'column', gap: '0.625rem', marginTop: '0.75rem' },
-  ticketCard:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.875rem 1rem' },
+  ticketFormBox:{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem' },
+  ticketList:   { display: 'flex', flexDirection: 'column', gap: '0.625rem' },
+  ticketCard:   { background: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' },
   ticketInfo:   { display: 'flex', flexDirection: 'column', gap: '0.2rem' },
   ticketName:   { fontWeight: 600, color: t.text, fontSize: '0.95rem' },
   ticketDetail: { color: t.accent, fontSize: '0.85rem', fontWeight: 500 },
@@ -392,12 +435,13 @@ const styles: Record<string, React.CSSProperties> = {
   removeBtn:    { padding: '0.3rem 0.7rem', fontSize: '0.78rem', flexShrink: 0 },
   emptyTickets: { color: t.textDim, fontSize: '0.85rem', lineHeight: 1.5, marginTop: '0.5rem' },
   formActions:  { display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' },
+  uploadHint:   { fontSize: '0.82rem', color: t.textDim },
 }
 
 const ttStyles: Record<string, React.CSSProperties> = {
-  form:      { display: 'flex', flexDirection: 'column', gap: '0.875rem' },
+  form:      { display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' },
   labelHint: { fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' },
-  grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 0.8fr', gap: '0.75rem' },
+  grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 0.6fr 0.8fr', gap: '0.75rem' },
   dateRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
   field:   { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
   hint:    { margin: 0, fontSize: '0.78rem', color: t.textDim, lineHeight: 1.5, padding: '0.5rem 0.75rem', background: `${t.accent}0D`, borderRadius: '6px', borderLeft: `3px solid ${t.accent}40` },

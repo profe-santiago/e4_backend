@@ -23,7 +23,7 @@ export const applyErrorInterceptor = (client: AxiosInstance): void => {
       }
 
       if (status && status >= 500) {
-        toast.error('Error del servidor. Intentá de nuevo más tarde.')
+        // El toast lo muestra cada mutación con contexto propio para evitar mensajes duplicados
         return Promise.reject(error)
       }
 

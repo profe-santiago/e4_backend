@@ -15,12 +15,14 @@ interface RegisterData {
 
 export const useRegister = () => {
   const [isLoading, setIsLoading] = useState(false)
+  const [serverError, setServerError] = useState(false)
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
   const authRepository = useAuthRepository()
   const userCreationPort = useUserCreationPort()
 
   const register = async (data: RegisterData) => {
+    if (serverError) return
     setIsLoading(true)
     try {
       const useCase = new RegisterUseCase(authRepository, userCreationPort)
@@ -31,9 +33,15 @@ export const useRegister = () => {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status
         if (status === 409 || status === 400) {
-          toast.error('El email ya está registrado')
+          toast.error('Este email ya está registrado. Intenta iniciar sesión.')
+        } else if (status && status >= 500) {
+          setServerError(true)
+          toast.error(
+            'Hubo un problema en el servidor. Es posible que tu cuenta ya se haya creado — intenta iniciar sesión.',
+            { duration: 8000 },
+          )
         } else {
-          toast.error('Error al registrarse')
+          toast.error('No se pudo completar el registro. Intenta de nuevo.')
         }
       }
     } finally {
@@ -41,5 +49,5 @@ export const useRegister = () => {
     }
   }
 
-  return { register, isLoading }
+  return { register, isLoading, serverError }
 }

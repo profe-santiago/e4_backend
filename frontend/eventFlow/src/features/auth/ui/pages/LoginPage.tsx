@@ -6,6 +6,7 @@ export default function LoginPage() {
   return (
     <div style={styles.container}>
       <div style={styles.glow} />
+      <Link to="/" style={styles.back}>← Volver a eventos</Link>
       <div style={styles.card}>
         <div style={styles.brand}>
           <div style={styles.brandIcon}>⬡</div>
@@ -13,14 +14,14 @@ export default function LoginPage() {
         </div>
 
         <h1 style={styles.heading}>Bienvenido de nuevo</h1>
-        <p style={styles.sub}>Iniciá sesión para continuar</p>
+        <p style={styles.sub}>Inicia sesión para continuar</p>
 
         <LoginForm />
 
         <p style={styles.footer}>
-          ¿No tenés cuenta?{' '}
+          ¿No tienes cuenta?{' '}
           <Link to="/register" className="ef-link">
-            Registrate gratis
+            Regístrate gratis
           </Link>
         </p>
       </div>
@@ -95,5 +96,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '1.5rem',
     fontSize: '0.875rem',
     color: t.textMuted,
+  },
+  back: {
+    position: 'absolute' as const,
+    top: '1.25rem',
+    left: '1.5rem',
+    textDecoration: 'none',
+    color: t.textMuted,
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    zIndex: 1,
   },
 }

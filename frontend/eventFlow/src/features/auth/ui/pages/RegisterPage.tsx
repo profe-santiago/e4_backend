@@ -6,6 +6,7 @@ export default function RegisterPage() {
   return (
     <div style={styles.container}>
       <div style={styles.glow} />
+      <Link to="/" style={styles.back}>← Volver a eventos</Link>
       <div style={styles.card}>
         <div style={styles.brand}>
           <div style={styles.brandIcon}>⬡</div>
@@ -13,14 +14,14 @@ export default function RegisterPage() {
         </div>
 
         <h1 style={styles.heading}>Crear cuenta</h1>
-        <p style={styles.sub}>Completá tus datos para registrarte</p>
+        <p style={styles.sub}>Completa tus datos para registrarte</p>
 
         <RegisterForm />
 
         <p style={styles.footer}>
-          ¿Ya tenés cuenta?{' '}
+          ¿Ya tienes cuenta?{' '}
           <Link to="/login" className="ef-link">
-            Iniciá sesión
+            Inicia sesión
           </Link>
         </p>
       </div>
@@ -71,4 +72,14 @@ const styles: Record<string, React.CSSProperties> = {
   heading: { textAlign: 'center', fontSize: '1.4rem', fontWeight: 700, color: t.text, marginBottom: '0.4rem' },
   sub: { textAlign: 'center', fontSize: '0.9rem', color: t.textMuted, marginBottom: '1.75rem' },
   footer: { textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: t.textMuted },
+  back: {
+    position: 'absolute' as const,
+    top: '1.25rem',
+    left: '1.5rem',
+    textDecoration: 'none',
+    color: t.textMuted,
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    zIndex: 1,
+  },
 }

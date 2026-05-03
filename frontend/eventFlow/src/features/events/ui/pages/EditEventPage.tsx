@@ -3,12 +3,14 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'react-hot-toast'
 import { useEventDetail } from '../hooks/useEventDetail'
 import { useUpdateEvent } from '../hooks/useUpdateEvent'
 import { useEventActions } from '../hooks/useEventActions'
 import { useCategories } from '../hooks/useCategories'
 import { useTicketTypesByEvent } from '../hooks/useTicketTypesByEvent'
 import { useTicketTypeActions } from '../hooks/useTicketTypeActions'
+import { useEventRepository } from '@/core/di/EventContext'
 import type { EventStatus } from '../../domain/entities/Event'
 import type { TicketType, CreateTicketTypeRequest } from '../../domain/entities/TicketType'
 import { t } from '@/shared/config/theme'
@@ -45,15 +47,6 @@ const ticketSchema = z.object({
   totalQuantity: z.number().int().min(1, 'Mínimo 1'),
   saleStartDate: z.string().optional(),
   saleEndDate:   z.string().optional(),
-}).superRefine((data, ctx) => {
-  const now = new Date()
-  if (data.saleEndDate && new Date(data.saleEndDate) < now) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No puede ser una fecha pasada', path: ['saleEndDate'] })
-  }
-  if (data.saleStartDate && data.saleEndDate &&
-      new Date(data.saleEndDate) <= new Date(data.saleStartDate)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe ser posterior al inicio de venta', path: ['saleEndDate'] })
-  }
 })
 
 type EventFormValues = z.infer<typeof eventSchema>
@@ -82,7 +75,7 @@ const TicketTypeForm = ({
   initial?: Partial<TicketType>
   isPending: boolean
 }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm<TicketFormValues>({
+  const { register, trigger, setError, getValues, formState: { errors } } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
     defaultValues: {
       name:          initial?.name ?? '',
@@ -94,6 +87,31 @@ const TicketTypeForm = ({
       saleEndDate:   toDateTimeInput(initial?.saleEndDate),
     },
   })
+
+  const handleClickGuardar = async () => {
+    const isValid = await trigger()
+    if (!isValid) return
+
+    const values = getValues()
+    const now = new Date()
+    const toDate = (s: string) => new Date(s.length === 10 ? `${s}T00:00` : s)
+
+    if (values.saleStartDate && toDate(values.saleStartDate) < now) {
+      setError('saleStartDate', { message: 'No puede ser una fecha pasada' })
+      return
+    }
+    if (values.saleEndDate && toDate(values.saleEndDate) < now) {
+      setError('saleEndDate', { message: 'No puede ser una fecha pasada' })
+      return
+    }
+    if (values.saleStartDate && values.saleEndDate &&
+        toDate(values.saleEndDate) <= toDate(values.saleStartDate)) {
+      setError('saleEndDate', { message: 'Debe ser posterior al inicio. Si es el mismo día, la hora debe ser mayor' })
+      return
+    }
+
+    onSave(values)
+  }
 
   return (
     <div style={ttStyles.form}>
@@ -142,10 +160,10 @@ const TicketTypeForm = ({
         Si no configurás fechas de venta, se usarán las fechas del evento: la venta abrirá de inmediato y cerrará al inicio del evento.
       </p>
       <div style={ttStyles.actions}>
-        <button type="button" className="ef-btn-ghost" style={{ padding: '0.4rem 1rem', fontSize: '0.875rem' }} onClick={onCancel}>
+        <button type="button" className="ef-btn-ghost" style={ttStyles.btn} onClick={onCancel}>
           Cancelar
         </button>
-        <button type="button" className="ef-btn" style={{ padding: '0.4rem 1rem', fontSize: '0.875rem' }} disabled={isPending} onClick={handleSubmit(onSave)}>
+        <button type="button" className="ef-btn" style={ttStyles.btn} disabled={isPending} onClick={handleClickGuardar}>
           {isPending ? 'Guardando...' : 'Guardar'}
         </button>
       </div>
@@ -156,6 +174,7 @@ const TicketTypeForm = ({
 export const EditEventPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const eventRepository = useEventRepository()
   const { data: event, isLoading, isError } = useEventDetail(id ?? '')
   const { data: categories = [] } = useCategories()
   const { mutate: update, isPending: isUpdating } = useUpdateEvent(id ?? '')
@@ -166,12 +185,35 @@ export const EditEventPage = () => {
   const [showTicketForm, setShowTicketForm] = useState(false)
   const [editingTicket, setEditingTicket] = useState<TicketType | null>(null)
   const [confirmDeleteTicketId, setConfirmDeleteTicketId] = useState<number | null>(null)
+  const [uploading, setUploading] = useState(false)
 
-  const { register, handleSubmit, reset, watch, formState: { errors, isDirty } } = useForm<EventFormValues>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors, isDirty } } = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
   })
 
   const imageUrl = watch('imageUrl') ?? ''
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Formato no permitido. Usá JPEG, PNG o WEBP.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen supera el límite de 5 MB.')
+      return
+    }
+    setUploading(true)
+    try {
+      const url = await eventRepository.uploadImage(file)
+      setValue('imageUrl', url, { shouldValidate: true, shouldDirty: true })
+    } catch {
+      toast.error('Error al subir la imagen. Intentá de nuevo.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   useEffect(() => {
     if (event) {
@@ -321,8 +363,18 @@ export const EditEventPage = () => {
         </div>
 
         <div style={styles.field}>
-          <label className="ef-label">URL de imagen</label>
-          <input type="url" {...register('imageUrl')} className="ef-input" placeholder="https://..." />
+          <label className="ef-label">Imagen del evento</label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="ef-input"
+            onChange={handleImageUpload}
+            disabled={uploading}
+            style={{ cursor: uploading ? 'not-allowed' : 'pointer' }}
+          />
+          <span style={styles.uploadHint}>
+            {uploading ? 'Subiendo imagen...' : 'Formatos: JPEG, PNG, WEBP · Máximo 5 MB'}
+          </span>
           {errors.imageUrl && <span className="ef-error">{errors.imageUrl.message}</span>}
           {isUrl(imageUrl) && <ImagePreview key={imageUrl} url={imageUrl} />}
         </div>
@@ -474,10 +526,11 @@ const styles: Record<string, React.CSSProperties> = {
   row:            { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
   field:          { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
   formActions:    { display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' },
+  uploadHint:     { fontSize: '0.82rem', color: t.textDim },
   section:        { borderTop: `1px solid ${t.border}`, paddingTop: '1.75rem' },
   sectionHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
   sectionTitle:   { fontSize: '1.15rem', fontWeight: 600, color: t.text },
-  ticketFormBox:  { background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem' },
+  ticketFormBox:  { background: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem' },
   ticketList:     { display: 'flex', flexDirection: 'column', gap: '0.625rem' },
   ticketCard:     { background: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' },
   ticketInfo:     { display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 },
@@ -501,6 +554,7 @@ const ttStyles: Record<string, React.CSSProperties> = {
   field:   { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
   hint:    { margin: 0, fontSize: '0.78rem', color: t.textDim, lineHeight: 1.5, padding: '0.5rem 0.75rem', background: `${t.accent}0D`, borderRadius: '6px', borderLeft: `3px solid ${t.accent}40` },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' },
+  btn:     { padding: '0.4rem 1rem', fontSize: '0.875rem' },
 }
 
 const salesStyles: Record<string, React.CSSProperties> = {

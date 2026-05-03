@@ -31,6 +31,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/schema", "/api/docs/**", "/api/docs.yaml").permitAll()
                         // Consulta pública de eventos publicados
                         .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/{id}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/events/{eventId}/ticket-types", "/api/v1/events/{eventId}/ticket-types/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/{id}").permitAll()
                         // Solo ADMIN puede crear/modificar/eliminar categorías
                         .requestMatchers(HttpMethod.POST, "/api/v1/categories").hasRole("ADMIN")

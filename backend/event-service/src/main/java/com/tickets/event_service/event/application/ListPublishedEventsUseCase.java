@@ -15,7 +15,7 @@ public class ListPublishedEventsUseCase {
         this.eventRepository = eventRepository;
     }
 
-    public PageResult<Event> execute(Long categoryId, int page, int size) {
-        return eventRepository.findPublished(EventStatus.PUBLISHED, categoryId, page, size);
+    public PageResult<Event> execute(Long categoryId, String search, String city, String venue, int page, int size) {
+        return eventRepository.findPublished(EventStatus.PUBLISHED, categoryId, search, city, venue, page, size);
     }
 }

@@ -20,6 +20,7 @@ export const CheckoutPage = () => {
 
   const [quantity, setQuantity] = useState(1)
   const [paymentMethodId, setPaymentMethodId] = useState('')
+  const [submitted, setSubmitted] = useState(false)
 
   const { data: event, isLoading: isLoadingEvent } = useEventDetail(eventId ?? '')
   const { data: ticketTypes = [], isLoading: isLoadingTickets } = useTicketTypesByEvent(eventId ?? '')
@@ -43,6 +44,8 @@ export const CheckoutPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (submitted || isPending) return
+    setSubmitted(true)
     createOrder({ items: [{ eventId: event.id, ticketTypeId: ticketType.id, quantity }], paymentMethodId })
   }
 
@@ -91,9 +94,16 @@ export const CheckoutPage = () => {
           <strong style={styles.totalAmount}>{formatPrice(total)}</strong>
         </div>
 
-        <button type="submit" disabled={isPending} className="ef-btn ef-btn-full">
-          {isPending ? 'Procesando...' : `Confirmar compra — ${formatPrice(total)}`}
+        <button type="submit" disabled={isPending || submitted} className="ef-btn ef-btn-full">
+          {isPending ? 'Procesando...' : submitted ? 'Solicitud enviada' : `Confirmar compra — ${formatPrice(total)}`}
         </button>
+        {submitted && !isPending && (
+          <p style={styles.submittedHint}>
+            Si hubo un error, revisa{' '}
+            <button style={styles.linkBtn} onClick={() => navigate('/orders')}>Mis órdenes</button>
+            {' '}antes de intentar de nuevo.
+          </p>
+        )}
       </form>
     </div>
   )
@@ -117,5 +127,6 @@ const styles: Record<string, React.CSSProperties> = {
   totalRow:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 0', borderTop: `1px solid ${t.border}` },
   totalLabel:  { color: t.textMuted, fontSize: '0.95rem' },
   totalAmount: { fontSize: '1.15rem', color: t.text },
-  linkBtn:     { background: 'none', border: 'none', color: t.accent, cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit' },
+  linkBtn:       { background: 'none', border: 'none', color: t.accent, cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 },
+  submittedHint: { fontSize: '0.82rem', color: t.textMuted, textAlign: 'center' as const, lineHeight: 1.5 },
 }

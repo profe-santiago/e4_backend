@@ -77,7 +77,10 @@ export const OrderDetailPage = () => {
               <div style={styles.paymentContent}>
                 <div style={styles.paymentRow}>
                   <span style={styles.paymentLabel}>Estado</span>
-                  <span style={{ ...styles.badge, background: cfg.color }}>{cfg.label}</span>
+                  <span style={{ ...styles.badge, background: cfg.color }}>
+                    {cfg.label}
+                    {payment.status === 'PENDING' && ' · procesando...'}
+                  </span>
                 </div>
                 <div style={styles.paymentRow}>
                   <span style={styles.paymentLabel}>Monto</span>

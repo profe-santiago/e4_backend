@@ -1,7 +1,9 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Link } from 'react-router-dom'
 import { useRegister } from '../hooks/useRegister'
+import { t } from '@/shared/config/theme'
 
 const schema = z
   .object({
@@ -19,7 +21,7 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 export const RegisterForm = () => {
-  const { register: doRegister, isLoading } = useRegister()
+  const { register: doRegister, isLoading, serverError } = useRegister()
   const {
     register,
     handleSubmit,
@@ -62,15 +64,23 @@ export const RegisterForm = () => {
         {errors.confirmPassword && <span className="ef-error">{errors.confirmPassword.message}</span>}
       </div>
 
-      <button type="submit" disabled={isLoading} className="ef-btn ef-btn-full" style={{ marginTop: '0.5rem' }}>
+      <button type="submit" disabled={isLoading || serverError} className="ef-btn ef-btn-full" style={{ marginTop: '0.5rem' }}>
         {isLoading ? 'Registrando...' : 'Crear cuenta'}
       </button>
+
+      {serverError && (
+        <p style={styles.serverErrorHint}>
+          Es posible que tu cuenta ya se haya creado.{' '}
+          <Link to="/login" style={{ color: t.accent, fontWeight: 600 }}>Intenta iniciar sesión</Link>
+        </p>
+      )}
     </form>
   )
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  form:  { display: 'flex', flexDirection: 'column', gap: '1rem' },
-  row:   { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
-  field: { display: 'flex', flexDirection: 'column' },
+  form:            { display: 'flex', flexDirection: 'column', gap: '1rem' },
+  row:             { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
+  field:           { display: 'flex', flexDirection: 'column' },
+  serverErrorHint: { fontSize: '0.82rem', color: t.textMuted, textAlign: 'center', lineHeight: 1.5, marginTop: '0.25rem' },
 }

@@ -26,7 +26,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/')
   }
 
   const handleNavClick = () => {

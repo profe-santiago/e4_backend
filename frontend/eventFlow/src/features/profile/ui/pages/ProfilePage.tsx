@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import axios from 'axios'
 import { useProfile } from '../hooks/useProfile'
 import { useUpdateProfile } from '../hooks/useUpdateProfile'
 import { useDeleteAccount } from '../hooks/useDeleteAccount'
+import { useCreateProfile } from '../hooks/useCreateProfile'
+import { useAuthStore } from '@/store/auth.store'
 import { t } from '@/shared/config/theme'
 
 const schema = z.object({
@@ -17,14 +20,26 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const createSchema = z.object({
+  firstName: z.string().min(1, 'Requerido'),
+  lastName:  z.string().min(1, 'Requerido'),
+})
+type CreateFormValues = z.infer<typeof createSchema>
+
 export const ProfilePage = () => {
-  const { data: user, isLoading, isError } = useProfile()
+  const { data: user, isLoading, isError, error } = useProfile()
   const { mutate: update, isPending: isUpdating } = useUpdateProfile()
   const { mutate: deleteAccount, isPending: isDeleting } = useDeleteAccount()
+  const { mutate: createProfile, isPending: isCreating } = useCreateProfile()
+  const authEmail = useAuthStore((s) => s.user?.email ?? '')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(schema),
+  })
+
+  const { register: registerCreate, handleSubmit: handleCreateSubmit, formState: { errors: createErrors } } = useForm<CreateFormValues>({
+    resolver: zodResolver(createSchema),
   })
 
   useEffect(() => {
@@ -49,7 +64,40 @@ export const ProfilePage = () => {
     })
   }
 
+  const is404 = isError && axios.isAxiosError(error) && error.response?.status === 404
+
   if (isLoading) return <div style={styles.feedback}>Cargando perfil...</div>
+
+  if (is404) return (
+    <div style={styles.container}>
+      <h1 style={styles.heading}>Completa tu perfil</h1>
+      <p style={styles.subtext}>
+        Tu cuenta fue creada pero aún no tiene un perfil. Completa los datos para continuar.
+      </p>
+      <form onSubmit={handleCreateSubmit((v) => createProfile({ ...v, email: authEmail }))} style={styles.form}>
+        <div style={styles.field}>
+          <label className="ef-label">Correo electrónico</label>
+          <input type="email" value={authEmail} readOnly className="ef-input" style={{ opacity: 0.6 }} />
+        </div>
+        <div style={styles.row}>
+          <div style={styles.field}>
+            <label className="ef-label">Nombre</label>
+            <input type="text" {...registerCreate('firstName')} className="ef-input" />
+            {createErrors.firstName && <span className="ef-error">{createErrors.firstName.message}</span>}
+          </div>
+          <div style={styles.field}>
+            <label className="ef-label">Apellido</label>
+            <input type="text" {...registerCreate('lastName')} className="ef-input" />
+            {createErrors.lastName && <span className="ef-error">{createErrors.lastName.message}</span>}
+          </div>
+        </div>
+        <button type="submit" disabled={isCreating} className="ef-btn" style={{ alignSelf: 'flex-start' }}>
+          {isCreating ? 'Guardando...' : 'Guardar perfil'}
+        </button>
+      </form>
+    </div>
+  )
+
   if (isError || !user) return <div style={styles.error}>Error al cargar el perfil.</div>
 
   return (
@@ -129,6 +177,7 @@ export const ProfilePage = () => {
 const styles: Record<string, React.CSSProperties> = {
   container:      { maxWidth: '600px', margin: '0 auto' },
   heading:        { fontSize: '1.75rem', fontWeight: 700, color: t.text, marginBottom: '0.25rem' },
+  subtext:        { color: t.textMuted, marginBottom: '2rem', fontSize: '0.9rem', lineHeight: 1.5 },
   email:          { color: t.textMuted, marginBottom: '2rem', fontSize: '0.9rem' },
   form:           { display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '3rem' },
   row:            { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },

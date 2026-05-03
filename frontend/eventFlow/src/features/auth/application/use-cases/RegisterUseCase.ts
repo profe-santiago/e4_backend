@@ -24,7 +24,9 @@ export class RegisterUseCase {
       email: data.email,
     }
 
-    await this.userCreationPort.create(profileData)
+    // El token del nuevo usuario se pasa explícitamente para evitar usar
+    // un token viejo o ninguno que haya en localStorage en ese momento
+    await this.userCreationPort.create(profileData, authResponse.token)
 
     return authResponse
   }

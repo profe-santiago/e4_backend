@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { PrivateRoute } from './PrivateRoute'
+import { PublicRoute } from './PublicRoute'
 import { RoleRoute } from './RoleRoute'
 
 const LoginPage = lazy(() => import('@/features/auth/ui/pages/LoginPage'))
@@ -16,7 +17,7 @@ const router = createBrowserRouter([
     element: <RegisterPage />,
   },
   {
-    element: <PrivateRoute />,
+    element: <PublicRoute />,
     children: [
       {
         path: '/',
@@ -26,6 +27,11 @@ const router = createBrowserRouter([
         path: '/events/:id',
         lazy: () => import('@/features/events/ui/pages/EventDetailPage').then((m) => ({ Component: m.EventDetailPage })),
       },
+    ],
+  },
+  {
+    element: <PrivateRoute />,
+    children: [
       {
         path: '/events/:id/checkout',
         lazy: () => import('@/features/orders/ui/pages/CheckoutPage').then((m) => ({ Component: m.CheckoutPage })),

@@ -9,5 +9,9 @@ export const usePaymentByOrder = (orderId: string, enabled = true) => {
     queryKey: ['payment-order', orderId],
     queryFn: () => new GetPaymentByOrderUseCase(paymentRepository).execute(orderId),
     enabled: enabled && !!orderId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status === 'PENDING' || status === undefined ? 3000 : false
+    },
   })
 }
