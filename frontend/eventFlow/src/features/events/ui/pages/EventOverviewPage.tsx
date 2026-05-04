@@ -17,8 +17,8 @@ const STATUS_COLOR: Record<EventStatus, string> = {
   CANCELLED: '#718096',
 }
 
-const fmt = (price: number, currency = 'ARS') =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(price)
+const fmt = (price: number, currency = 'USD') =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price)
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
@@ -39,7 +39,7 @@ export const EventOverviewPage = () => {
   const totalCapacity = ticketTypes.reduce((a, tt) => a + tt.totalQuantity, 0)
   const totalSold     = ticketTypes.reduce((a, tt) => a + (tt.totalQuantity - tt.availableQuantity), 0)
   const totalRevenue  = ticketTypes.reduce((a, tt) => a + (tt.totalQuantity - tt.availableQuantity) * tt.price, 0)
-  const primaryCurrency = ticketTypes[0]?.currency ?? 'ARS'
+  const primaryCurrency = ticketTypes[0]?.currency ?? 'USD'
   const occupancy = pct(totalSold, totalCapacity)
 
   return (

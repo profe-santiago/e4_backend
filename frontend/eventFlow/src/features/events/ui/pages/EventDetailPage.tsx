@@ -8,8 +8,8 @@ import { t } from '@/shared/config/theme'
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
 
-const formatPrice = (price: number, currency = 'ARS') =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(price)
+const formatPrice = (price: number, currency = 'USD') =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price)
 
 const getTicketSaleStatus = (
   saleStartDate: string | null | undefined,

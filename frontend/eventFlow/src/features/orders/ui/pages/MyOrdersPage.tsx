@@ -24,7 +24,7 @@ const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
 const formatPrice = (amount: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount)
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
 
 export const MyOrdersPage = () => {
   const { data, isLoading, isError, page, onPageChange } = useMyOrders()

@@ -14,7 +14,7 @@ import { useEventRepository } from '@/core/di/EventContext'
 import type { EventStatus } from '../../domain/entities/Event'
 import type { TicketType, CreateTicketTypeRequest } from '../../domain/entities/TicketType'
 import { t } from '@/shared/config/theme'
-import { COUNTRIES, CURRENCIES } from '@/shared/config/formOptions'
+import { COUNTRIES } from '@/shared/config/formOptions'
 import { ImagePreview } from '@/shared/components/ImagePreview'
 
 const isUrl = (s: string) => { try { return !!new URL(s) } catch { return false } }
@@ -43,7 +43,6 @@ const ticketSchema = z.object({
   name:           z.string().min(1, 'Requerido').max(100),
   description:    z.string().optional(),
   price:          z.number().min(0, 'No puede ser negativo'),
-  currency:       z.string().length(3),
   totalQuantity:  z.number().int().min(1, 'Mínimo 1'),
   saleStartDate:  z.string().optional(),
   saleStartTime:  z.string().optional(),
@@ -86,7 +85,6 @@ const TicketTypeForm = ({
       name:          initial?.name ?? '',
       description:   initial?.description ?? '',
       price:         initial?.price ?? 0,
-      currency:      initial?.currency ?? 'USD',
       totalQuantity: initial?.totalQuantity ?? 1,
       saleStartDate: toDatePart(initial?.saleStartDate),
       saleStartTime: toTimePart(initial?.saleStartDate) || '00:00',
@@ -129,17 +127,9 @@ const TicketTypeForm = ({
           {errors.name && <span className="ef-error">{errors.name.message}</span>}
         </div>
         <div style={ttStyles.field}>
-          <label className="ef-label">Precio *</label>
+          <label className="ef-label">Precio (USD) *</label>
           <input type="number" step="0.01" {...register('price', { valueAsNumber: true })} className="ef-input" />
           {errors.price && <span className="ef-error">{errors.price.message}</span>}
-        </div>
-        <div style={ttStyles.field}>
-          <label className="ef-label">Moneda</label>
-          <select {...register('currency')} className="ef-input">
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
-            ))}
-          </select>
         </div>
         <div style={ttStyles.field}>
           <label className="ef-label">Cantidad *</label>
@@ -265,7 +255,7 @@ export const EditEventPage = () => {
       name:          values.name,
       description:   values.description || undefined,
       price:         values.price,
-      currency:      values.currency || 'ARS',
+      currency:      'USD',
       totalQuantity: values.totalQuantity,
       saleStartDate: combineDT(values.saleStartDate, values.saleStartTime, '00:00'),
       saleEndDate:   combineDT(values.saleEndDate,   values.saleEndTime,   '23:59'),
@@ -282,7 +272,7 @@ export const EditEventPage = () => {
           name:          values.name,
           description:   values.description || undefined,
           price:         values.price,
-          currency:      values.currency || 'ARS',
+          currency:      'USD',
           totalQuantity: values.totalQuantity,
           saleStartDate: combineDT(values.saleStartDate, values.saleStartTime, '00:00'),
           saleEndDate:   combineDT(values.saleEndDate,   values.saleEndTime,   '23:59'),
@@ -435,7 +425,7 @@ export const EditEventPage = () => {
                     <div style={styles.ticketInfo}>
                       <span style={styles.ticketName}>{tt.name}</span>
                       <span style={styles.ticketDetail}>
-                        {tt.currency} {tt.price.toFixed(2)} · {tt.availableQuantity}/{tt.totalQuantity} disponibles
+                        USD {tt.price.toFixed(2)} · {tt.availableQuantity}/{tt.totalQuantity} disponibles
                       </span>
                       {tt.description && <span style={styles.ticketDesc}>{tt.description}</span>}
                       {(tt.saleStartDate || tt.saleEndDate) && (
@@ -471,8 +461,7 @@ export const EditEventPage = () => {
       {ticketTypes.length > 0 && !isLoadingTickets && (() => {
         const totalSold = ticketTypes.reduce((acc, tt) => acc + (tt.totalQuantity - tt.availableQuantity), 0)
         const totalRevenue = ticketTypes.reduce((acc, tt) => acc + (tt.totalQuantity - tt.availableQuantity) * tt.price, 0)
-        const currency = ticketTypes[0]?.currency ?? 'ARS'
-        const fmt = (n: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(n)
+        const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
         return (
           <section style={styles.section}>
             <h2 style={styles.sectionTitle}>Resumen de ventas</h2>
@@ -564,7 +553,7 @@ const styles: Record<string, React.CSSProperties> = {
 const ttStyles: Record<string, React.CSSProperties> = {
   form:      { display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' },
   labelHint: { fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' },
-  grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 0.6fr 0.8fr', gap: '0.75rem' },
+  grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' },
   dateRow:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
   dateTimeRow: { display: 'flex', gap: '0.5rem' },
   field:       { display: 'flex', flexDirection: 'column', gap: '0.35rem' },

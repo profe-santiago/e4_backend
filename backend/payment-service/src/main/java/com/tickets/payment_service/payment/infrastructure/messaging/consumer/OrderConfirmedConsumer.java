@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class OrderConfirmedConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(OrderConfirmedConsumer.class);
-    private static final String DEFAULT_CURRENCY = "MXN";
+    private static final String DEFAULT_CURRENCY = "USD";
 
     private final ProcessPaymentUseCase processPaymentUseCase;
 

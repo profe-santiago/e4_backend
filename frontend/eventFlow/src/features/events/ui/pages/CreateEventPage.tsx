@@ -12,7 +12,7 @@ import { CreateTicketTypeUseCase } from '../../application/use-cases/CreateTicke
 import { useCategories } from '../hooks/useCategories'
 import type { CreateTicketTypeRequest } from '../../domain/entities/TicketType'
 import { t } from '@/shared/config/theme'
-import { COUNTRIES, CURRENCIES } from '@/shared/config/formOptions'
+import { COUNTRIES } from '@/shared/config/formOptions'
 import { ImagePreview } from '@/shared/components/ImagePreview'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -47,7 +47,6 @@ const ticketSchema = z.object({
   name:          z.string().min(1, 'Requerido').max(100),
   description:   z.string().optional(),
   price:         z.number().min(0, 'No puede ser negativo'),
-  currency:      z.string().length(3),
   totalQuantity: z.number().int().min(1, 'Mínimo 1'),
   saleStartDate: z.string().optional(),
   saleStartTime: z.string().optional(),
@@ -66,7 +65,7 @@ type TicketFormValues = z.infer<typeof ticketSchema>
 const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => void; onCancel: () => void }) => {
   const { register, trigger, setError, getValues, reset, formState: { errors } } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
-    defaultValues: { currency: 'USD', totalQuantity: 1, price: 0, saleStartTime: '00:00', saleEndTime: '23:59' },
+    defaultValues: { totalQuantity: 1, price: 0, saleStartTime: '00:00', saleEndTime: '23:59' },
   })
 
   const handleClickAgregar = async () => {
@@ -92,7 +91,7 @@ const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => v
     }
 
     onAdd(values)
-    reset({ currency: 'ARS', totalQuantity: 1, price: 0, saleStartTime: '00:00', saleEndTime: '23:59' })
+    reset({ totalQuantity: 1, price: 0, saleStartTime: '00:00', saleEndTime: '23:59' })
   }
 
   return (
@@ -104,17 +103,9 @@ const TicketTypeForm = ({ onAdd, onCancel }: { onAdd: (v: TicketFormValues) => v
           {errors.name && <span className="ef-error">{errors.name.message}</span>}
         </div>
         <div style={ttStyles.field}>
-          <label className="ef-label">Precio *</label>
+          <label className="ef-label">Precio (USD) *</label>
           <input type="number" step="0.01" min="0" {...register('price', { valueAsNumber: true })} className="ef-input" />
           {errors.price && <span className="ef-error">{errors.price.message}</span>}
-        </div>
-        <div style={ttStyles.field}>
-          <label className="ef-label">Moneda</label>
-          <select {...register('currency')} className="ef-input">
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
-            ))}
-          </select>
         </div>
         <div style={ttStyles.field}>
           <label className="ef-label">Cantidad *</label>
@@ -229,7 +220,7 @@ export const CreateEventPage = () => {
               name:          tt.name,
               description:   tt.description || undefined,
               price:         tt.price,
-              currency:      tt.currency,
+              currency:      'USD',
               totalQuantity: tt.totalQuantity,
               saleStartDate: combineDT(tt.saleStartDate, tt.saleStartTime, '00:00'),
               saleEndDate:   combineDT(tt.saleEndDate,   tt.saleEndTime,   '23:59'),
@@ -375,7 +366,7 @@ export const CreateEventPage = () => {
                   <div style={styles.ticketInfo}>
                     <span style={styles.ticketName}>{tt.name}</span>
                     <span style={styles.ticketDetail}>
-                      {tt.currency} {tt.price.toFixed(2)} · {tt.totalQuantity} unidades
+                      USD {tt.price.toFixed(2)} · {tt.totalQuantity} unidades
                     </span>
                     {tt.description && <span style={styles.ticketDesc}>{tt.description}</span>}
                     {(tt.saleStartDate || tt.saleEndDate) && (
@@ -454,7 +445,7 @@ const styles: Record<string, React.CSSProperties> = {
 const ttStyles: Record<string, React.CSSProperties> = {
   form:      { display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' },
   labelHint: { fontWeight: 400, color: '#6b7280', fontSize: '0.75rem' },
-  grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 0.6fr 0.8fr', gap: '0.75rem' },
+  grid:    { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' },
   dateRow:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' },
   dateTimeRow: { display: 'flex', gap: '0.5rem' },
   field:       { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
