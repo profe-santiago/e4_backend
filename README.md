@@ -430,19 +430,3 @@ open http://localhost:15672  # guest / guest
 - [x] Reembolsos (implementado en backend)
 - [x] Frontend completo con React + TypeScript
 
-### Pendiente / En progreso
-
-- [ ] **Notificaciones por email**: el backend está implementado pero requiere configurar credenciales SMTP reales (`MAIL_PASSWORD` en `.env`). Ver sección de configuración.
-- [ ] **Revisión del flujo de reembolsos**: implementado en backend, falta UI en el frontend y pruebas end-to-end del flujo completo.
-- [ ] **Badge de notificaciones no leídas** en el sidebar del frontend.
-- [ ] Notificaciones en tiempo real (WebSockets / Server-Sent Events).
-- [ ] Reservas con TTL (timeout automático de órdenes PENDING).
-- [ ] Mapa interactivo de asientos.
-- [ ] Observabilidad completa (Prometheus + Grafana + Zipkin).
-- [ ] Tests de carga con Gatling.
-
----
-
-## Licencia
-
-Proyecto privado.
