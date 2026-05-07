@@ -7,7 +7,7 @@ export interface Payment {
   amount: number
   currency: string
   status: PaymentStatus
-  paymentMethodId: string | null
+  paymentIntentId: string | null
   transactionId: string | null
   createdAt: string
   updatedAt: string | null

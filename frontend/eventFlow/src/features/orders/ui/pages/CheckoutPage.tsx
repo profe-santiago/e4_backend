@@ -5,19 +5,34 @@ import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStri
 import { useEventDetail } from '@/features/events/ui/hooks/useEventDetail'
 import { useTicketTypesByEvent } from '@/features/events/ui/hooks/useTicketTypesByEvent'
 import { useCreateOrder } from '../hooks/useCreateOrder'
+import { useCreatePaymentIntent } from '@/features/payments/ui/hooks/useCreatePaymentIntent'
 import { t } from '@/shared/config/theme'
 import type { Event } from '@/features/events/domain/entities/Event'
 import type { TicketType } from '@/features/events/domain/entities/TicketType'
 
-// loadStripe se llama UNA sola vez fuera del componente.
-// Retorna una promesa que <Elements> resuelve internamente.
-// Esto garantiza que el script de Stripe.js se cargue una sola vez
-// desde los servidores de Stripe (requisito de PCI compliance).
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string)
 
-// Estilo compartido para los tres iframes de Stripe.
-// Cada campo (número, expiración, CVC) vive en su propio iframe,
-// por eso los colores se pasan como config en lugar de CSS externo.
+const STRIPE_ERROR_MESSAGES: Record<string, string> = {
+  insufficient_funds: 'Fondos insuficientes. Verificá el saldo de tu tarjeta.',
+  card_declined:      'Tarjeta declinada. Intentá con otra tarjeta.',
+  expired_card:       'La tarjeta está vencida.',
+  incorrect_cvc:      'El código de seguridad es incorrecto.',
+  processing_error:   'Error al procesar el pago. Intentá de nuevo.',
+}
+
+const stripeErrorMessage = (code?: string, fallback?: string): string =>
+  (code && STRIPE_ERROR_MESSAGES[code]) ?? fallback ?? 'El pago fue rechazado.'
+
+const IS_TEST_MODE = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_')
+
+const TEST_CARDS = [
+  { label: 'Pago exitoso (sin 3DS)',  number: '4242 4242 4242 4242' },
+  { label: 'Pago exitoso (con 3DS)',  number: '4000 0025 0000 3155' },
+  { label: 'Fondos insuficientes',    number: '4000 0000 0000 9995' },
+  { label: 'Tarjeta declinada',       number: '4000 0000 0000 0002' },
+  { label: 'Tarjeta vencida',         number: '4000 0000 0000 0069' },
+]
+
 const fieldStyle = {
   style: {
     base: {
@@ -38,9 +53,6 @@ interface LocationState {
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price)
 
-// ── Formulario interno ────────────────────────────────────────────────────────
-// Debe vivir DENTRO de <Elements> para poder usar useStripe() y useElements().
-// Recibe los datos ya cargados como props para no repetir fetching.
 interface PaymentFormProps {
   event: Event
   ticketType: TicketType
@@ -48,10 +60,11 @@ interface PaymentFormProps {
 
 const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
   const navigate = useNavigate()
-  const stripe = useStripe()     // contexto de Stripe.js (disponible porque estamos dentro de <Elements>)
-  const elements = useElements() // acceso a los elementos montados (CardElement)
+  const stripe = useStripe()
+  const elements = useElements()
 
-  const { mutate: createOrder, isPending } = useCreateOrder()
+  const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder()
+  const { mutateAsync: createIntent, isPending: isCreatingIntent } = useCreatePaymentIntent()
 
   const [quantity, setQuantity] = useState(1)
   const [cardError, setCardError] = useState('')
@@ -59,6 +72,7 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
 
   const maxQty = Math.min(ticketType.availableQuantity, 10)
   const total = ticketType.price * quantity
+  const isPending = isCreatingIntent || isCreatingOrder
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,20 +83,38 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
     const cardNumber = elements.getElement(CardNumberElement)
     if (!cardNumber) return
 
-    const { paymentMethod, error } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardNumber,
-    })
-
-    if (error) {
-      setCardError(error.message ?? 'Error al procesar la tarjeta')
+    // Paso 1: crear el PaymentIntent en el backend
+    let clientSecret: string
+    let paymentIntentId: string
+    try {
+      const intent = await createIntent({ amount: total, currency: 'USD' })
+      clientSecret = intent.clientSecret
+      paymentIntentId = intent.paymentIntentId
+    } catch {
+      setCardError('No se pudo iniciar el pago. Intentá de nuevo.')
       return
     }
 
+    // Paso 2: confirmar en el browser — Stripe maneja 3DS automáticamente
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardNumber },
+    })
+
+    if (error) {
+      setCardError(stripeErrorMessage(error.code, error.message))
+      return
+    }
+
+    if (paymentIntent?.status !== 'succeeded') {
+      setCardError('El pago no pudo completarse. Intentá de nuevo.')
+      return
+    }
+
+    // Paso 3: crear la orden con el paymentIntentId ya confirmado
     setSubmitted(true)
     createOrder({
       items: [{ eventId: event.id, ticketTypeId: ticketType.id, quantity }],
-      paymentMethodId: paymentMethod.id,
+      paymentIntentId,
     })
   }
 
@@ -124,7 +156,18 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
       </div>
 
       {cardError && <span style={styles.errorMsg}>{cardError}</span>}
-      <span style={styles.hint}>Para pruebas: <code style={styles.code}>4242 4242 4242 4242</code> · cualquier fecha futura · cualquier CVC</span>
+
+      {IS_TEST_MODE && (
+        <div style={styles.testPanel}>
+          <p style={styles.testTitle}>Tarjetas de prueba — fecha futura · CVC cualquiera</p>
+          {TEST_CARDS.map((card) => (
+            <div key={card.number} style={styles.testRow}>
+              <code style={styles.testNumber}>{card.number}</code>
+              <span style={styles.testLabel}>{card.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div style={styles.totalRow}>
         <span style={styles.totalLabel}>Total a pagar</span>
@@ -136,7 +179,13 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
         disabled={!stripe || isPending || submitted}
         className="ef-btn ef-btn-full"
       >
-        {isPending ? 'Procesando...' : submitted ? 'Solicitud enviada' : `Confirmar compra — ${formatPrice(total)}`}
+        {isCreatingIntent
+          ? 'Iniciando pago...'
+          : isCreatingOrder
+            ? 'Confirmando orden...'
+            : submitted
+              ? 'Solicitud enviada'
+              : `Confirmar compra — ${formatPrice(total)}`}
       </button>
 
       {submitted && !isPending && (
@@ -150,9 +199,6 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
   )
 }
 
-// ── Página principal ──────────────────────────────────────────────────────────
-// Carga los datos del evento y tipo de ticket, luego monta el provider
-// <Elements> que le da contexto de Stripe a PaymentForm.
 export const CheckoutPage = () => {
   const { id: eventId } = useParams<{ id: string }>()
   const location = useLocation()
@@ -189,8 +235,6 @@ export const CheckoutPage = () => {
         <p style={styles.ticketPrice}>{formatPrice(ticketType.price)} por entrada</p>
       </div>
 
-      {/* <Elements> provee el contexto de Stripe a todos los componentes hijos.
-          stripePromise se resuelve una vez y Elements lo mantiene. */}
       <Elements stripe={stripePromise}>
         <PaymentForm event={event} ticketType={ticketType} />
       </Elements>
@@ -219,11 +263,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '8px',
   },
   errorMsg:     { color: t.error, fontSize: '0.8rem' },
-  hint:         { color: t.textDim, fontSize: '0.8rem', marginTop: '0.25rem' },
-  code:         { background: t.surface2, padding: '0.1rem 0.4rem', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.8rem', color: t.text },
   totalRow:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 0', borderTop: `1px solid ${t.border}` },
   totalLabel:   { color: t.textMuted, fontSize: '0.95rem' },
   totalAmount:  { fontSize: '1.15rem', color: t.text },
-  linkBtn:      { background: 'none', border: 'none', color: t.accent, cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 },
-  submittedHint:{ fontSize: '0.82rem', color: t.textMuted, textAlign: 'center' as const, lineHeight: 1.5 },
+  linkBtn:       { background: 'none', border: 'none', color: t.accent, cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 },
+  submittedHint: { fontSize: '0.82rem', color: t.textMuted, textAlign: 'center' as const, lineHeight: 1.5 },
+  testPanel:     { background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.875rem', display: 'flex', flexDirection: 'column' as const, gap: '0.4rem' },
+  testTitle:     { fontSize: '0.75rem', color: t.textDim, margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  testRow:       { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' },
+  testNumber:    { fontFamily: 'monospace', fontSize: '0.8rem', color: t.text, letterSpacing: '0.05em' },
+  testLabel:     { fontSize: '0.75rem', color: t.textMuted, textAlign: 'right' as const },
 }

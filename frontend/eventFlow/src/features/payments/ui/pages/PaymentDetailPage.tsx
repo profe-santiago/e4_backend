@@ -46,10 +46,10 @@ export const PaymentDetailPage = () => {
           <span style={styles.label}>Moneda</span>
           <span style={styles.value}>{payment.currency}</span>
         </div>
-        {payment.paymentMethodId && (
+        {payment.paymentIntentId && (
           <div style={styles.row}>
-            <span style={styles.label}>Método de pago</span>
-            <span style={{ ...styles.value, fontFamily: 'monospace' }}>{payment.paymentMethodId}</span>
+            <span style={styles.label}>ID del pago</span>
+            <span style={{ ...styles.value, fontFamily: 'monospace' }}>{payment.paymentIntentId}</span>
           </div>
         )}
         {payment.transactionId && (

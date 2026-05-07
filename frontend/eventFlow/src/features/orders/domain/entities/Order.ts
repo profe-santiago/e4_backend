@@ -12,7 +12,7 @@ export interface Order {
   userId: string
   status: OrderStatus
   totalAmount: number
-  paymentMethodId: string
+  paymentIntentId: string
   items: OrderItem[]
   createdAt: string
   updatedAt: string
@@ -24,5 +24,5 @@ export interface CreateOrderRequest {
     ticketTypeId: number
     quantity: number
   }>
-  paymentMethodId: string
+  paymentIntentId: string
 }
