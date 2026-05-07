@@ -33,7 +33,7 @@ class UserHttpGateway implements UserGateway {
     public Optional<UserInfo> findById(UserId userId) {
         try {
             UserDto dto = restClient.get()
-                    .uri("/api/v1/users/{id}", userId.value())
+                    .uri("/api/v1/internal/users/{id}", userId.value())
                     .retrieve()
                     .body(UserDto.class);
             if (dto == null) return Optional.empty();

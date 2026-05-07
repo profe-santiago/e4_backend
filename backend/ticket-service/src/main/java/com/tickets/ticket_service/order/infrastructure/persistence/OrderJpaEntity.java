@@ -39,8 +39,8 @@ public class OrderJpaEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemJpaEntity> items = new ArrayList<>();
 
-    @Column(name = "payment_method_id", length = 255, nullable = false)
-    private String paymentMethodId;
+    @Column(name = "payment_intent_id", length = 255, nullable = false)
+    private String paymentIntentId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

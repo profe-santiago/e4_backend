@@ -30,7 +30,7 @@ public class CreateOrderUseCase {
                 .map(i -> OrderItem.create(i.eventId(), i.ticketTypeId(), i.quantity()))
                 .toList();
 
-        Order order = Order.create(command.userId(), command.paymentMethodId(), items);
+        Order order = Order.create(command.userId(), command.paymentIntentId(), items);
         Order saved = orderRepository.save(order);
 
         // Publica el comando asíncrono de reserva de stock — no bloquea

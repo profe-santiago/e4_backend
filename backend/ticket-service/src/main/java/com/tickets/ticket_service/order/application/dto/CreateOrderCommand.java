@@ -9,7 +9,7 @@ import java.util.UUID;
  */
 public record CreateOrderCommand(
         UUID userId,
-        String paymentMethodId,
+        String paymentIntentId,
         List<OrderItemData> items
 ) {
     public record OrderItemData(UUID eventId, Long ticketTypeId, int quantity) {}

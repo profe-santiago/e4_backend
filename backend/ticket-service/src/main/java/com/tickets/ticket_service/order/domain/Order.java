@@ -22,7 +22,7 @@ public class Order {
     private UUID userId;
     private OrderStatus status;
     private BigDecimal totalAmount;
-    private String paymentMethodId;
+    private String paymentIntentId;
     private List<OrderItem> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -31,10 +31,10 @@ public class Order {
 
     // ─── Factory method ───────────────────────────────────────────────────
 
-    public static Order create(UUID userId, String paymentMethodId, List<OrderItem> items) {
+    public static Order create(UUID userId, String paymentIntentId, List<OrderItem> items) {
         Order order = new Order();
         order.userId = userId;
-        order.paymentMethodId = paymentMethodId;
+        order.paymentIntentId = paymentIntentId;
         order.status = OrderStatus.PENDING;
         order.totalAmount = BigDecimal.ZERO; // se actualiza al confirmar
         order.items = new ArrayList<>(items);
@@ -100,7 +100,7 @@ public class Order {
     public UUID getUserId() { return userId; }
     public OrderStatus getStatus() { return status; }
     public BigDecimal getTotalAmount() { return totalAmount; }
-    public String getPaymentMethodId() { return paymentMethodId; }
+    public String getPaymentIntentId() { return paymentIntentId; }
     public List<OrderItem> getItems() { return Collections.unmodifiableList(items != null ? items : List.of()); }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
@@ -111,7 +111,7 @@ public class Order {
     public void setUserId(UUID userId) { this.userId = userId; }
     public void setStatus(OrderStatus status) { this.status = status; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
-    public void setPaymentMethodId(String paymentMethodId) { this.paymentMethodId = paymentMethodId; }
+    public void setPaymentIntentId(String paymentIntentId) { this.paymentIntentId = paymentIntentId; }
     public void setItems(List<OrderItem> items) { this.items = new ArrayList<>(items); }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }

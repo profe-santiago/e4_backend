@@ -8,17 +8,10 @@ import com.tickets.notification_service.notification.domain.UserId;
 import com.tickets.notification_service.notification.infrastructure.rest.dto.NotificationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -36,22 +29,24 @@ public class NotificationController {
 
     @GetMapping("/users/{userId}")
     @Operation(summary = "Obtener historial de notificaciones de un usuario")
-    public Page<NotificationResponse> getByUser(
+    public Map<String, Object> getByUser(
             @PathVariable UUID userId,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        GetUserNotificationsQuery query = new GetUserNotificationsQuery(
-                UserId.of(userId),
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
-
+        GetUserNotificationsQuery query = new GetUserNotificationsQuery(UserId.of(userId), page, size);
         PagedResult<Notification> result = useCase.execute(query);
 
-        List<NotificationResponse> responses = result.content().stream()
+        List<NotificationResponse> content = result.content().stream()
                 .map(mapper::toResponse)
                 .toList();
 
-        return new PageImpl<>(responses, PageRequest.of(result.page(), result.size()), result.totalElements());
+        return Map.of(
+                "content", content,
+                "totalElements", result.totalElements(),
+                "totalPages", result.totalPages(),
+                "number", result.page(),
+                "size", result.size()
+        );
     }
 }

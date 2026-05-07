@@ -5,6 +5,7 @@ import com.tickets.ticket_service.ticket.domain.Ticket;
 import com.tickets.ticket_service.ticket.domain.TicketRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -35,7 +36,7 @@ public class JpaTicketRepository implements TicketRepository {
 
     @Override
     public PageResult<Ticket> findAllByUserIdWithOrder(UUID userId, int page, int size) {
-        Page<TicketJpaEntity> result = springData.findAllByUserId(userId, PageRequest.of(page, size));
+        Page<TicketJpaEntity> result = springData.findAllByUserId(userId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "purchasedAt")));
         return new PageResult<>(
                 result.getContent().stream().map(mapper::toDomain).toList(),
                 result.getTotalElements(),

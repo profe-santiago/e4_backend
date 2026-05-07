@@ -40,7 +40,7 @@ public class OrderConfirmedConsumer {
                 event.getUserId(),
                 event.getTotalAmount(),
                 DEFAULT_CURRENCY,
-                event.getPaymentMethodId()
+                event.getPaymentIntentId()
         );
 
         processPaymentUseCase.execute(command);
