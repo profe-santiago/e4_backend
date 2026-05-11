@@ -28,7 +28,12 @@ export const CategoryFilter = ({ categories, selected, onChange }: Props) => (
 )
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' },
+  container: {
+    display: 'flex', gap: '0.5rem', marginBottom: '1.5rem',
+    overflowX: 'auto', paddingBottom: '4px',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+  } as React.CSSProperties,
   chip: {
     padding: '0.35rem 1rem',
     borderRadius: '999px',
@@ -39,6 +44,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.85rem',
     fontWeight: 500,
     transition: 'all 0.15s',
+    flexShrink: 0,
+    whiteSpace: 'nowrap' as const,
   },
   active: {
     background: t.accent,
