@@ -40,9 +40,11 @@ public class RequestRefundUseCase {
         }
 
         if (order.getStatus() != OrderStatus.CONFIRMED) {
-            throw new InvalidOrderStateException(order.getStatus(), OrderStatus.REFUNDED);
+            throw new InvalidOrderStateException(order.getStatus(), OrderStatus.REFUND_PENDING);
         }
 
+        order.requestRefund();
+        orderRepository.save(order);
         eventPublisher.publishRefundInitiated(order.getId(), order.getUserId());
 
         return order;

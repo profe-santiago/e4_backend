@@ -85,12 +85,30 @@ public class Order {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /** Reembolso aprobado. Solo órdenes CONFIRMED pueden reembolsarse. */
+    /** Inicia el flujo de reembolso: CONFIRMED → REFUND_PENDING. */
+    public void requestRefund() {
+        if (!status.canTransitionTo(OrderStatus.REFUND_PENDING)) {
+            throw new InvalidOrderStateException(status, OrderStatus.REFUND_PENDING);
+        }
+        this.status = OrderStatus.REFUND_PENDING;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /** Reembolso aprobado en Stripe: REFUND_PENDING → REFUNDED. */
     public void refund() {
         if (!status.canTransitionTo(OrderStatus.REFUNDED)) {
             throw new InvalidOrderStateException(status, OrderStatus.REFUNDED);
         }
         this.status = OrderStatus.REFUNDED;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /** Reembolso fallido: REFUND_PENDING → CONFIRMED (permite reintentar). */
+    public void failRefund() {
+        if (!status.canTransitionTo(OrderStatus.CONFIRMED)) {
+            throw new InvalidOrderStateException(status, OrderStatus.CONFIRMED);
+        }
+        this.status = OrderStatus.CONFIRMED;
         this.updatedAt = LocalDateTime.now();
     }
 
