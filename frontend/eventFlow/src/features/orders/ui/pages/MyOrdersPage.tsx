@@ -3,25 +3,26 @@ import { useMyOrders } from '../hooks/useMyOrders'
 import { PaginationControl } from '@/features/events/ui/components/PaginationControl'
 import type { OrderStatus } from '../../domain/entities/Order'
 import { t } from '@/shared/config/theme'
+import { formatDate } from '@/shared/utils/formatDate'
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
-  PENDING:   '#d69e2e',
-  CONFIRMED: '#38a169',
-  FAILED:    '#e53e3e',
-  CANCELLED: '#718096',
-  REFUNDED:  t.accent,
+  PENDING:        '#d69e2e',
+  CONFIRMED:      '#38a169',
+  FAILED:         '#e53e3e',
+  CANCELLED:      '#718096',
+  REFUND_PENDING: '#b7791f',
+  REFUNDED:       t.accent,
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING:   'Pendiente',
-  CONFIRMED: 'Confirmada',
-  FAILED:    'Fallida',
-  CANCELLED: 'Cancelada',
-  REFUNDED:  'Reembolsada',
+  PENDING:        'Pendiente',
+  CONFIRMED:      'Confirmada',
+  FAILED:         'Fallida',
+  CANCELLED:      'Cancelada',
+  REFUND_PENDING: 'Reembolso en proceso',
+  REFUNDED:       'Reembolsada',
 }
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
 const formatPrice = (amount: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)

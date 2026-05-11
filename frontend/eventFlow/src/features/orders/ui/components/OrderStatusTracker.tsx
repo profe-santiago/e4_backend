@@ -6,18 +6,19 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; description: string }> = {
-  PENDING:   { label: 'Pendiente',   color: '#d69e2e', description: 'Reservando stock y procesando pago...' },
-  CONFIRMED: { label: 'Confirmada',  color: '#38a169', description: 'Orden confirmada. ¡El pago fue procesado!' },
-  FAILED:    { label: 'Fallida',     color: '#e53e3e', description: 'La orden no pudo procesarse.' },
-  CANCELLED: { label: 'Cancelada',   color: '#718096', description: 'La orden fue cancelada.' },
-  REFUNDED:  { label: 'Reembolsada', color: t.accent,  description: 'El reembolso fue procesado.' },
+  PENDING:        { label: 'Pendiente',            color: '#d69e2e', description: 'Reservando stock y procesando pago...' },
+  CONFIRMED:      { label: 'Confirmada',           color: '#38a169', description: 'Orden confirmada. ¡El pago fue procesado!' },
+  REFUND_PENDING: { label: 'Reembolso en proceso', color: '#b7791f', description: 'Procesando el reembolso con Stripe...' },
+  FAILED:         { label: 'Fallida',              color: '#e53e3e', description: 'La orden no pudo procesarse.' },
+  CANCELLED:      { label: 'Cancelada',            color: '#718096', description: 'La orden fue cancelada.' },
+  REFUNDED:       { label: 'Reembolsada',          color: t.accent,  description: 'El reembolso fue procesado.' },
 }
 
 const STEPS: OrderStatus[] = ['PENDING', 'CONFIRMED']
 
 export const OrderStatusTracker = ({ status }: Props) => {
   const config = STATUS_CONFIG[status]
-  const isTerminal = ['FAILED', 'CANCELLED', 'REFUNDED'].includes(status)
+  const isTerminal = ['FAILED', 'CANCELLED', 'REFUND_PENDING', 'REFUNDED'].includes(status)
   const currentStep = STEPS.indexOf(status as typeof STEPS[number])
 
   return (

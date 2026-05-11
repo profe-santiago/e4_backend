@@ -1,4 +1,4 @@
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'FAILED' | 'CANCELLED' | 'REFUNDED'
+export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'REFUND_PENDING' | 'FAILED' | 'CANCELLED' | 'REFUNDED'
 
 export interface OrderItem {
   eventId: string
