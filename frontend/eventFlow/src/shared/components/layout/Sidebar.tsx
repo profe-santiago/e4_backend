@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth.store'
 import { NAV_ITEMS } from '@/shared/config/navigation'
 import { SidebarNavItem } from './SidebarNavItem'
 import { t } from '@/shared/config/theme'
+import { useUnreadNotificationCount } from '@/features/notifications/ui/hooks/useUnreadNotificationCount'
 
 interface SidebarProps {
   isOpen: boolean
@@ -36,6 +37,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     if (isMobile) onClose()
   }
 
+  const unreadCount = useUnreadNotificationCount()
+
   const publicItems = NAV_ITEMS.filter((item) => !item.adminOnly)
   const adminItems = NAV_ITEMS.filter((item) => item.adminOnly)
 
@@ -60,7 +63,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
         <nav style={styles.nav} onClick={handleNavClick}>
           {publicItems.map((item) => (
-            <SidebarNavItem key={item.path} item={item} />
+            <SidebarNavItem
+              key={item.path}
+              item={item}
+              badge={item.path === '/notifications' ? unreadCount : undefined}
+            />
           ))}
           {isAdmin && (
             <>
