@@ -16,6 +16,7 @@ import type { TicketType, CreateTicketTypeRequest } from '../../domain/entities/
 import { t } from '@/shared/config/theme'
 import { COUNTRIES } from '@/shared/config/formOptions'
 import { ImagePreview } from '@/shared/components/ImagePreview'
+import { formatDateTimeShort } from '@/shared/utils/formatDate'
 
 const isUrl = (s: string) => { try { return !!new URL(s) } catch { return false } }
 
@@ -30,7 +31,7 @@ const eventSchema = z.object({
   endDate:     z.string().optional(),
   imageUrl:    z.string().url('URL inválida').max(500).optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
-  if (data.endDate && data.startDate && new Date(data.endDate) <= new Date(data.startDate)) {
+  if (data.endDate && data.startDate && new Date(data.endDate + 'T00:00') <= new Date(data.startDate + 'T00:00')) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Debe ser posterior a la fecha de inicio',
@@ -432,11 +433,11 @@ export const EditEventPage = () => {
                         <span style={styles.ticketSaleDates}>
                           Venta:{' '}
                           {tt.saleStartDate
-                            ? `desde ${new Date(tt.saleStartDate).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                            ? `desde ${formatDateTimeShort(tt.saleStartDate)}`
                             : 'ya abierta'
                           }
                           {tt.saleEndDate
-                            ? ` · hasta ${new Date(tt.saleEndDate).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                            ? ` · hasta ${formatDateTimeShort(tt.saleEndDate)}`
                             : ''
                           }
                         </span>

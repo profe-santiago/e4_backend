@@ -4,6 +4,7 @@ import { useTicketTypesByEvent } from '../hooks/useTicketTypesByEvent'
 import { useEventActions } from '../hooks/useEventActions'
 import type { EventStatus } from '../../domain/entities/Event'
 import { t } from '@/shared/config/theme'
+import { formatDateLong as fmtDate, formatDateTimeShort } from '@/shared/utils/formatDate'
 
 const STATUS_LABEL: Record<EventStatus, string> = {
   DRAFT:     'Borrador',
@@ -19,9 +20,6 @@ const STATUS_COLOR: Record<EventStatus, string> = {
 
 const fmt = (price: number, currency = 'USD') =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price)
-
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
 
 const pct = (sold: number, total: number) =>
   total > 0 ? Math.round((sold / total) * 100) : 0
@@ -144,6 +142,16 @@ export const EventOverviewPage = () => {
                             <span style={styles.ttName}>{tt.name}</span>
                             <span style={styles.ttPrice}>{fmt(tt.price, tt.currency)}</span>
                           </div>
+                          {(tt.saleStartDate || tt.saleEndDate) && (
+                            <div style={styles.ttDates}>
+                              {tt.saleStartDate && (
+                                <span>Inicio venta: <strong>{formatDateTimeShort(tt.saleStartDate)}</strong></span>
+                              )}
+                              {tt.saleEndDate && (
+                                <span>Fin venta: <strong>{formatDateTimeShort(tt.saleEndDate)}</strong></span>
+                              )}
+                            </div>
+                          )}
                           <div style={styles.ttStats}>
                             <div style={styles.ttBarTrack}>
                               <div style={{ ...styles.ttBarFill, width: `${p}%` }} />
@@ -222,6 +230,7 @@ const styles: Record<string, React.CSSProperties> = {
   ttStats:      { display: 'flex', flexDirection: 'column', gap: '0.3rem' },
   ttBarTrack:   { height: '5px', background: t.border, borderRadius: '3px', overflow: 'hidden', width: '100%' },
   ttBarFill:    { height: '100%', background: t.accent, borderRadius: '3px', transition: 'width 0.4s ease' },
+  ttDates:      { gridColumn: '1 / -1', display: 'flex', gap: '1rem', flexWrap: 'wrap' as const, fontSize: '0.75rem', color: t.textDim, background: t.surface2, borderRadius: '6px', padding: '0.35rem 0.6rem' },
   ttNumbers:    { fontSize: '0.78rem', color: t.textMuted },
   ttBadge:      { fontSize: '0.75rem', fontWeight: 600, flexShrink: 0, textAlign: 'right' as const },
 }

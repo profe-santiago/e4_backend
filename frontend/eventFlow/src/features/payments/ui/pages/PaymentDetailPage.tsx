@@ -2,12 +2,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { usePayment } from '../hooks/usePayment'
 import type { PaymentStatus } from '../../domain/entities/Payment'
 import { t } from '@/shared/config/theme'
+import { formatDateTime as formatDate } from '@/shared/utils/formatDate'
 
 const formatAmount = (amount: number, currency: string) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(amount)
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 const STATUS_CONFIG: Record<PaymentStatus, { label: string; color: string }> = {
   PENDING:  { label: 'Pendiente',   color: '#d69e2e' },

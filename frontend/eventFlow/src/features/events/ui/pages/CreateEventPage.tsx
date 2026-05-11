@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -14,6 +14,7 @@ import type { CreateTicketTypeRequest } from '../../domain/entities/TicketType'
 import { t } from '@/shared/config/theme'
 import { COUNTRIES } from '@/shared/config/formOptions'
 import { ImagePreview } from '@/shared/components/ImagePreview'
+import { formatDateTimeShort } from '@/shared/utils/formatDate'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,10 +36,10 @@ const eventSchema = z.object({
   imageUrl:    z.string().url('URL inválida').max(500).optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  if (data.startDate && new Date(data.startDate) < today) {
+  if (data.startDate && new Date(data.startDate + 'T00:00') < today) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No puede ser una fecha pasada', path: ['startDate'] })
   }
-  if (data.endDate && data.startDate && new Date(data.endDate) < new Date(data.startDate)) {
+  if (data.endDate && data.startDate && new Date(data.endDate + 'T00:00') < new Date(data.startDate + 'T00:00')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe ser igual o posterior a la fecha de inicio', path: ['endDate'] })
   }
 })
@@ -198,7 +199,11 @@ export const CreateEventPage = () => {
       new CreateEventUseCase(eventRepository).execute(req),
   })
 
+  const submittingRef = useRef(false)
+
   const onSubmit = async (values: EventFormValues) => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     try {
       const event = await createEvent({
         title:       values.title,
@@ -236,6 +241,8 @@ export const CreateEventPage = () => {
       navigate('/my-events')
     } catch {
       toast.error('Error al crear el evento. Intentá de nuevo.')
+    } finally {
+      submittingRef.current = false
     }
   }
 
@@ -373,11 +380,11 @@ export const CreateEventPage = () => {
                       <span style={styles.ticketSaleDates}>
                         Venta:{' '}
                         {tt.saleStartDate
-                          ? `desde ${new Date(tt.saleStartDate).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                          ? `desde ${formatDateTimeShort(tt.saleStartDate)}`
                           : 'ya abierta'
                         }
                         {tt.saleEndDate
-                          ? ` · hasta ${new Date(tt.saleEndDate).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                          ? ` · hasta ${formatDateTimeShort(tt.saleEndDate)}`
                           : ''
                         }
                       </span>

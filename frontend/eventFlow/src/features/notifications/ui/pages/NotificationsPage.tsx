@@ -1,7 +1,12 @@
+import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useMyNotifications } from '../hooks/useMyNotifications'
+import { markNotificationsViewed } from '../hooks/useUnreadNotificationCount'
 import { PaginationControl } from '@/features/events/ui/components/PaginationControl'
 import type { NotificationStatus, NotificationType } from '../../domain/entities/Notification'
 import { t } from '@/shared/config/theme'
+import { formatDateTime } from '@/shared/utils/formatDate'
+import { useAuthStore } from '@/store/auth.store'
 
 const TYPE_LABELS: Record<NotificationType, string> = {
   PURCHASE_CONFIRMATION: 'Compra confirmada',
@@ -18,11 +23,17 @@ const STATUS_COLORS: Record<NotificationStatus, string> = {
   FAILED:  '#e53e3e',
 }
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const formatDate = formatDateTime
 
 export const NotificationsPage = () => {
   const { data, isLoading, isError, page, onPageChange } = useMyNotifications()
+  const queryClient = useQueryClient()
+  const userId = useAuthStore((s) => s.user?.userId)
+
+  useEffect(() => {
+    markNotificationsViewed()
+    queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] })
+  }, [])
 
   return (
     <div style={styles.container}>

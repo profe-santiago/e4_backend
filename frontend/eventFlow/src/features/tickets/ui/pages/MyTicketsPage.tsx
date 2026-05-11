@@ -3,6 +3,7 @@ import { useMyTickets } from '../hooks/useMyTickets'
 import { PaginationControl } from '@/features/events/ui/components/PaginationControl'
 import type { TicketStatus } from '../../domain/entities/Ticket'
 import { t } from '@/shared/config/theme'
+import { formatDate } from '@/shared/utils/formatDate'
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string }> = {
   ACTIVE:    { label: 'Activo',    color: '#38a169' },
@@ -10,8 +11,6 @@ const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string }> = {
   CANCELLED: { label: 'Cancelado', color: '#e53e3e' },
 }
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
 export const MyTicketsPage = () => {
   const { data, isLoading, isError, page, onPageChange } = useMyTickets()

@@ -4,12 +4,7 @@ import { useTicketTypesByEvent } from '@/features/events/ui/hooks/useTicketTypes
 import { QrScanner } from '../components/QrScanner'
 import type { Ticket } from '../../domain/entities/Ticket'
 import { t } from '@/shared/config/theme'
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-AR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+import { formatDateTime as formatDate } from '@/shared/utils/formatDate'
 
 const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div style={styles.infoRow}>

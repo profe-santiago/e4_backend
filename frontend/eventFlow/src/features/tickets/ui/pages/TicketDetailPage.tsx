@@ -4,6 +4,7 @@ import { useTicketTypesByEvent } from '@/features/events/ui/hooks/useTicketTypes
 import { QRDisplay } from '../components/QRDisplay'
 import type { TicketStatus } from '../../domain/entities/Ticket'
 import { t } from '@/shared/config/theme'
+import { formatDateTime } from '@/shared/utils/formatDate'
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string }> = {
   ACTIVE:    { label: 'Activo',    color: '#38a169' },
@@ -11,8 +12,7 @@ const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string }> = {
   CANCELLED: { label: 'Cancelado', color: '#e53e3e' },
 }
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const formatDate = formatDateTime
 
 export const TicketDetailPage = () => {
   const { id } = useParams<{ id: string }>()

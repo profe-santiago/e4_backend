@@ -4,6 +4,7 @@ import { useMyEvents } from '../hooks/useMyEvents'
 import { useEventActions } from '../hooks/useEventActions'
 import type { Event, EventStatus } from '../../domain/entities/Event'
 import { t } from '@/shared/config/theme'
+import { formatDateShort } from '@/shared/utils/formatDate'
 
 const statusLabel: Record<EventStatus, string> = {
   DRAFT:     'Borrador',
@@ -33,8 +34,7 @@ export const MyEventsPage = () => {
     deleteEvent.mutate(confirmDeleteId, { onSuccess: () => setConfirmDeleteId(null) })
   }
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const formatDate = formatDateShort
 
   if (isLoading) return <div style={styles.feedback}>Cargando eventos...</div>
   if (isError) return <div style={styles.error}>Error al cargar los eventos.</div>
