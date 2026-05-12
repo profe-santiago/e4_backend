@@ -16,16 +16,24 @@ import java.util.UUID;
  */
 interface SpringDataEventRepository extends JpaRepository<EventJpaEntity, UUID> {
 
-    @Query(value = "SELECT e FROM EventJpaEntity e LEFT JOIN FETCH e.category WHERE e.status = :status",
-           countQuery = "SELECT COUNT(e) FROM EventJpaEntity e WHERE e.status = :status")
-    Page<EventJpaEntity> findAllByStatusWithCategory(
-            @Param("status") EventStatus status, Pageable pageable);
-
-    @Query(value = "SELECT e FROM EventJpaEntity e LEFT JOIN FETCH e.category WHERE e.status = :status AND e.category.id = :categoryId",
-           countQuery = "SELECT COUNT(e) FROM EventJpaEntity e WHERE e.status = :status AND e.category.id = :categoryId")
-    Page<EventJpaEntity> findAllByStatusAndCategoryIdWithCategory(
+    @Query(value = "SELECT e FROM EventJpaEntity e LEFT JOIN FETCH e.category " +
+                   "WHERE e.status = :status " +
+                   "AND (:categoryId IS NULL OR e.category.id = :categoryId) " +
+                   "AND (:search = '' OR LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                   "AND (:city = '' OR LOWER(e.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
+                   "AND (:venue = '' OR LOWER(e.venue) LIKE LOWER(CONCAT('%', :venue, '%')))",
+           countQuery = "SELECT COUNT(e) FROM EventJpaEntity e " +
+                        "WHERE e.status = :status " +
+                        "AND (:categoryId IS NULL OR e.category.id = :categoryId) " +
+                        "AND (:search = '' OR LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                        "AND (:city = '' OR LOWER(e.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
+                        "AND (:venue = '' OR LOWER(e.venue) LIKE LOWER(CONCAT('%', :venue, '%')))")
+    Page<EventJpaEntity> findAllByFilters(
             @Param("status") EventStatus status,
             @Param("categoryId") Long categoryId,
+            @Param("search") String search,
+            @Param("city") String city,
+            @Param("venue") String venue,
             Pageable pageable);
 
     List<EventJpaEntity> findAllByOrganizerId(UUID organizerId);

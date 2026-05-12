@@ -26,7 +26,7 @@ public class EmailTemplateBuilder {
                     </tr>
                     <tr>
                       <td style="padding:8px; border:1px solid #ddd;"><strong>Total</strong></td>
-                      <td style="padding:8px; border:1px solid #ddd;">$%s MXN</td>
+                      <td style="padding:8px; border:1px solid #ddd;">$%s USD</td>
                     </tr>
                     <tr style="background:#f4f4f4;">
                       <td style="padding:8px; border:1px solid #ddd;"><strong>Tickets</strong></td>

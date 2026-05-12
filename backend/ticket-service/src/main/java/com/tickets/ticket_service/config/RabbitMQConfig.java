@@ -8,6 +8,7 @@ import com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderRefund
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.PaymentCompletedEvent;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.PaymentFailedEvent;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.RefundCompletedEvent;
+import com.tickets.ticket_service.order.infrastructure.messaging.dto.RefundFailedEvent;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.RefundInitiatedEvent;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.StockFailedEvent;
 import com.tickets.ticket_service.order.infrastructure.messaging.dto.StockReserveCommand;
@@ -49,6 +50,7 @@ public class RabbitMQConfig {
     @Value("${app.rabbitmq.queues.order-events}")    private String orderEventsQueue;
     @Value("${app.rabbitmq.queues.payment-failed}")   private String paymentFailedQueue;
     @Value("${app.rabbitmq.queues.refund-completed}") private String refundCompletedQueue;
+    @Value("${app.rabbitmq.queues.refund-failed}")    private String refundFailedQueue;
 
     @Value("${app.rabbitmq.routing-keys.stock-reserve}")   private String rkStockReserve;
     @Value("${app.rabbitmq.routing-keys.stock-reserved}")  private String rkStockReserved;
@@ -58,6 +60,7 @@ public class RabbitMQConfig {
     @Value("${app.rabbitmq.routing-keys.payment-failed}")   private String rkPaymentFailed;
     @Value("${app.rabbitmq.routing-keys.refund-initiated}") private String rkRefundInitiated;
     @Value("${app.rabbitmq.routing-keys.refund-completed}") private String rkRefundCompleted;
+    @Value("${app.rabbitmq.routing-keys.refund-failed}")    private String rkRefundFailed;
     @Value("${app.rabbitmq.routing-keys.order-refunded}")   private String rkOrderRefunded;
 
     // ── Exchanges ─────────────────────────────────────────────────────────────
@@ -111,6 +114,14 @@ public class RabbitMQConfig {
                 .build();
     }
 
+    @Bean
+    public Queue refundFailedQueue() {
+        return QueueBuilder.durable(refundFailedQueue)
+                .withArgument("x-dead-letter-exchange", dlx)
+                .withArgument("x-dead-letter-routing-key", refundFailedQueue + ".dlq")
+                .build();
+    }
+
     // ── Dead Letter Queues ────────────────────────────────────────────────────
 
     @Bean
@@ -131,6 +142,11 @@ public class RabbitMQConfig {
     @Bean
     public Queue refundCompletedDlq() {
         return QueueBuilder.durable(refundCompletedQueue + ".dlq").build();
+    }
+
+    @Bean
+    public Queue refundFailedDlq() {
+        return QueueBuilder.durable(refundFailedQueue + ".dlq").build();
     }
 
     // ── Bindings ──────────────────────────────────────────────────────────────
@@ -184,6 +200,17 @@ public class RabbitMQConfig {
                 .with(refundCompletedQueue + ".dlq");
     }
 
+    @Bean
+    public Binding refundFailedBinding() {
+        return BindingBuilder.bind(refundFailedQueue()).to(ticketsExchange()).with(rkRefundFailed);
+    }
+
+    @Bean
+    public Binding refundFailedDlqBinding() {
+        return BindingBuilder.bind(refundFailedDlq()).to(deadLetterExchange())
+                .with(refundFailedQueue + ".dlq");
+    }
+
     // ── Serialización: Jackson con type aliases (cross-service safe) ──────────
 
     @Bean
@@ -226,6 +253,7 @@ public class RabbitMQConfig {
         mappings.put("PaymentCompletedEvent",  PaymentCompletedEvent.class);
         mappings.put("RefundInitiatedEvent",   RefundInitiatedEvent.class);
         mappings.put("RefundCompletedEvent",   RefundCompletedEvent.class);
+        mappings.put("RefundFailedEvent",      RefundFailedEvent.class);
         // FQCNs de event-service (fallback cuando Spring AMQP envía FQCN en lugar de alias)
         mappings.put("com.tickets.event_service.tickettype.infrastructure.messaging.dto.StockReservedEvent", StockReservedEvent.class);
         mappings.put("com.tickets.event_service.tickettype.infrastructure.messaging.dto.StockFailedEvent",   StockFailedEvent.class);
@@ -233,6 +261,7 @@ public class RabbitMQConfig {
         mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentCompletedEvent", PaymentCompletedEvent.class);
         mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentFailedEvent",    PaymentFailedEvent.class);
         mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.RefundCompletedEvent",  RefundCompletedEvent.class);
+        mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.RefundFailedEvent",    RefundFailedEvent.class);
         return mappings;
     }
 }

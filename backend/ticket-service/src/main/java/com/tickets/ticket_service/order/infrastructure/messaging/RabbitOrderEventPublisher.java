@@ -63,13 +63,13 @@ public class RabbitOrderEventPublisher implements OrderEventPublisher {
 
     @Override
     public void publishOrderConfirmed(UUID orderId, UUID userId, BigDecimal totalAmount,
-                                       String paymentMethodId, List<TicketData> tickets) {
+                                       String paymentIntentId, List<TicketData> tickets) {
         List<OrderConfirmedEvent.ConfirmedTicket> dtoTickets = tickets.stream()
                 .map(t -> new OrderConfirmedEvent.ConfirmedTicket(
                         t.ticketId(), t.eventId(), t.ticketTypeId(), t.qrCode()))
                 .toList();
         OrderConfirmedEvent event = new OrderConfirmedEvent(
-                orderId, userId, totalAmount, paymentMethodId, dtoTickets);
+                orderId, userId, totalAmount, paymentIntentId, dtoTickets);
         log.info("[PUBLISH] order.confirmed → orderId={}", orderId);
         rabbitTemplate.convertAndSend(exchange, rkOrderConfirmed, event);
     }

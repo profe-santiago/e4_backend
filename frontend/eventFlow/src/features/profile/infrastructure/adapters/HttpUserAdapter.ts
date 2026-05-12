@@ -1,9 +1,14 @@
 import type { AxiosInstance } from 'axios'
 import type { UserRepository } from '../../domain/ports/UserRepository'
-import type { User, UpdateUserRequest } from '../../domain/entities/User'
+import type { User, UpdateUserRequest, CreateProfileRequest } from '../../domain/entities/User'
 
 export class HttpUserAdapter implements UserRepository {
   constructor(private readonly client: AxiosInstance) {}
+
+  async createMe(data: CreateProfileRequest): Promise<User> {
+    const { data: user } = await this.client.post<User>('/api/v1/users', data)
+    return user
+  }
 
   async getMe(): Promise<User> {
     const { data } = await this.client.get<User>('/api/v1/users/me')

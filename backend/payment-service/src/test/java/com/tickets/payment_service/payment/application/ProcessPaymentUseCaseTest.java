@@ -41,18 +41,18 @@ class ProcessPaymentUseCaseTest {
 
     private static final UUID ORDER_ID = UUID.randomUUID();
     private static final UUID USER_ID  = UUID.randomUUID();
-    private static final String PM_ID  = "pm_test_visa";
+    private static final String PI_ID  = "pi_test_visa";
 
     private ProcessPaymentCommand buildCommand() {
-        return new ProcessPaymentCommand(ORDER_ID, USER_ID, new BigDecimal("500.00"), "MXN", PM_ID);
+        return new ProcessPaymentCommand(ORDER_ID, USER_ID, new BigDecimal("500.00"), "USD", PI_ID);
     }
 
     private Payment pendingPaymentStub() {
         return Payment.create(
                 OrderId.of(ORDER_ID),
                 UserId.of(USER_ID),
-                com.tickets.payment_service.payment.domain.Money.of(new BigDecimal("500.00"), "MXN"),
-                PM_ID
+                com.tickets.payment_service.payment.domain.Money.of(new BigDecimal("500.00"), "USD"),
+                PI_ID
         );
     }
 

@@ -17,3 +17,9 @@ export interface UpdateUserRequest {
   birthDate?: string
   avatarUrl?: string
 }
+
+export interface CreateProfileRequest {
+  firstName: string
+  lastName: string
+  email: string
+}

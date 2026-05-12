@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * Entidad JPA de TicketType — vive SOLO en infrastructure/persistence.
@@ -44,4 +45,10 @@ class TicketTypeJpaEntity {
 
     @Column(name = "available_quantity", nullable = false)
     private int availableQuantity;
+
+    @Column(name = "sale_start_date")
+    private LocalDateTime saleStartDate;
+
+    @Column(name = "sale_end_date")
+    private LocalDateTime saleEndDate;
 }

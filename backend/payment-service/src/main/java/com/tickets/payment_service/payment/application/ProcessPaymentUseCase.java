@@ -57,11 +57,11 @@ public class ProcessPaymentUseCase {
         UserId userId = UserId.of(command.userId());
 
         // Crear el aggregate en estado PENDING y persistir antes del cobro
-        Payment payment = Payment.create(orderId, userId, money, command.paymentMethodId());
+        Payment payment = Payment.create(orderId, userId, money, command.paymentIntentId());
         payment = paymentRepository.save(payment);
 
         // Delegar el cobro al gateway — nunca lanza excepción; el resultado lo informa
-        PaymentChargeResult result = paymentGateway.charge(money, command.paymentMethodId(), orderId);
+        PaymentChargeResult result = paymentGateway.charge(money, command.paymentIntentId(), orderId);
 
         // El aggregate aplica la lógica de transición de estado
         if (result.succeeded()) {

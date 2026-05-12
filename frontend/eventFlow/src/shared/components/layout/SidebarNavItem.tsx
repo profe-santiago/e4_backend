@@ -3,40 +3,31 @@ import type { NavItem } from '@/shared/config/navigation'
 
 interface SidebarNavItemProps {
   item: NavItem
+  badge?: number
 }
 
-const activeStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.75rem',
-  padding: '0.6rem 1rem',
-  textDecoration: 'none',
-  color: '#e2e8f0',
-  backgroundColor: 'rgba(255,255,255,0.1)',
-  borderLeft: '3px solid #63b3ed',
-  borderRadius: '0 4px 4px 0',
-  fontWeight: 500,
-}
-
-const inactiveStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.75rem',
-  padding: '0.6rem 1rem',
-  textDecoration: 'none',
-  color: '#a0aec0',
-  borderLeft: '3px solid transparent',
-  borderRadius: '0 4px 4px 0',
-}
-
-export const SidebarNavItem = ({ item }: SidebarNavItemProps) => {
-  return (
-    <NavLink
-      to={item.path}
-      end={item.path === '/'}
-      style={({ isActive }) => (isActive ? activeStyle : inactiveStyle)}
-    >
-      <span>{item.label}</span>
-    </NavLink>
-  )
-}
+export const SidebarNavItem = ({ item, badge }: SidebarNavItemProps) => (
+  <NavLink
+    to={item.path}
+    end={item.path === '/'}
+    className={({ isActive }) => `ef-nav-item${isActive ? ' active' : ''}`}
+    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+  >
+    <span>{item.label}</span>
+    {badge != null && badge > 0 && (
+      <span style={{
+        background: '#e53e3e',
+        color: '#fff',
+        fontSize: '0.65rem',
+        fontWeight: 700,
+        borderRadius: '999px',
+        padding: '0.1rem 0.45rem',
+        minWidth: '18px',
+        textAlign: 'center',
+        lineHeight: '1.4',
+      }}>
+        {badge > 99 ? '99+' : badge}
+      </span>
+    )}
+  </NavLink>
+)

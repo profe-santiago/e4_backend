@@ -30,7 +30,7 @@ public interface OrderEventPublisher {
     void publishStockReserve(UUID orderId, UUID userId, List<StockItem> items);
 
     void publishOrderConfirmed(UUID orderId, UUID userId, BigDecimal totalAmount,
-                                String paymentMethodId, List<TicketData> tickets);
+                                String paymentIntentId, List<TicketData> tickets);
 
     void publishOrderCancelled(UUID orderId, UUID userId, String reason, List<StockReleaseItem> items);
 

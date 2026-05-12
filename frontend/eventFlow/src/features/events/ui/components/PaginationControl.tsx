@@ -1,3 +1,5 @@
+import { t } from '@/shared/config/theme'
+
 interface Props {
   currentPage: number
   totalPages: number
@@ -10,18 +12,18 @@ export const PaginationControl = ({ currentPage, totalPages, onPageChange }: Pro
   return (
     <div style={styles.container}>
       <button
+        className="ef-btn-ghost"
         style={styles.btn}
         disabled={currentPage === 0}
         onClick={() => onPageChange(currentPage - 1)}
       >
         ← Anterior
       </button>
-
       <span style={styles.info}>
         {currentPage + 1} / {totalPages}
       </span>
-
       <button
+        className="ef-btn-ghost"
         style={styles.btn}
         disabled={currentPage === totalPages - 1}
         onClick={() => onPageChange(currentPage + 1)}
@@ -34,6 +36,6 @@ export const PaginationControl = ({ currentPage, totalPages, onPageChange }: Pro
 
 const styles: Record<string, React.CSSProperties> = {
   container: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginTop: '2rem' },
-  btn: { padding: '0.5rem 1rem', borderRadius: '4px', border: '1px solid #cbd5e0', background: '#fff', cursor: 'pointer' },
-  info: { color: '#555', fontSize: '0.875rem' },
+  btn: { padding: '0.45rem 1rem', fontSize: '0.875rem' },
+  info: { color: t.textMuted, fontSize: '0.875rem' },
 }

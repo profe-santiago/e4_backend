@@ -18,7 +18,7 @@ class PaymentPersistenceMapper {
         entity.setAmount(domain.getAmount().amount());
         entity.setCurrency(domain.getAmount().currency());
         entity.setStatus(domain.getStatus());
-        entity.setPaymentMethodId(domain.getPaymentMethodId());
+        entity.setPaymentIntentId(domain.getPaymentIntentId());
         entity.setTransactionId(domain.getTransactionId());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
@@ -31,7 +31,7 @@ class PaymentPersistenceMapper {
                 OrderId.of(entity.getOrderId()),
                 UserId.of(entity.getUserId()),
                 Money.of(entity.getAmount(), entity.getCurrency()),
-                entity.getPaymentMethodId(),
+                entity.getPaymentIntentId(),
                 entity.getStatus(),
                 entity.getTransactionId(),
                 entity.getCreatedAt(),

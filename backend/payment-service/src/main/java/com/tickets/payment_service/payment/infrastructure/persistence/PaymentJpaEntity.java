@@ -44,8 +44,8 @@ class PaymentJpaEntity implements Persistable<UUID> {
     @Column(nullable = false)
     private PaymentStatus status;
 
-    @Column(name = "payment_method")
-    private String paymentMethodId;
+    @Column(name = "payment_intent_id")
+    private String paymentIntentId;
 
     @Column(name = "transaction_id", unique = true)
     private String transactionId;

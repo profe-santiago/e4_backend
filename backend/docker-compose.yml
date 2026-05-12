@@ -6,14 +6,13 @@ services:
     image: rabbitmq:3-management
     container_name: rabbitmq
     hostname: rabbitmq
-    user: "999"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
       RABBITMQ_ERLANG_COOKIE: "e4_backend_cookie"
       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit vm_memory_high_watermark 0.6"
-    tmpfs:
-      - /var/lib/rabbitmq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -182,6 +181,8 @@ services:
       TICKET_SERVICE_PORT: 8083
       PAYMENT_SERVICE_HOST: payment-service
       PAYMENT_SERVICE_PORT: 8084
+      NOTIFICATION_SERVICE_HOST: notification-service
+      NOTIFICATION_SERVICE_PORT: 8085
     depends_on:
       redis:
         condition: service_healthy
@@ -195,6 +196,8 @@ services:
         condition: service_started
       payment-service:
         condition: service_started
+      notification-service:
+        condition: service_started
     networks:
       - tickets-network
     restart: on-failure
@@ -204,8 +207,6 @@ services:
       context: ./auth-service
       dockerfile: Dockerfile
     container_name: auth_service
-    ports:
-      - "8090:8090"  # Only exposed for debugging, use gateway instead
     environment:
       SERVER_PORT: 8090
       DB_HOST: auth-db
@@ -230,8 +231,6 @@ services:
       context: ./user-service
       dockerfile: Dockerfile
     container_name: user_service
-    ports:
-      - "8081:8081"
     environment:
       SERVER_PORT: 8081
       DB_HOST: user-db
@@ -255,8 +254,6 @@ services:
       context: ./event-service
       dockerfile: Dockerfile
     container_name: event_service
-    ports:
-      - "8082:8082"
     environment:
       SERVER_PORT: 8082
       DB_HOST: event-db
@@ -272,6 +269,9 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     depends_on:
       event-db:
         condition: service_healthy
@@ -286,8 +286,6 @@ services:
       context: ./ticket-service
       dockerfile: Dockerfile
     container_name: ticket_service
-    ports:
-      - "8083:8083"
     environment:
       SERVER_PORT: 8083
       DB_HOST: ticket-db
@@ -317,8 +315,6 @@ services:
       context: ./payment-service
       dockerfile: Dockerfile
     container_name: payment_service
-    ports:
-      - "8084:8084"
     environment:
       SERVER_PORT: 8084
       DB_HOST: payment-db
@@ -348,8 +344,6 @@ services:
       context: ./notification-service
       dockerfile: Dockerfile
     container_name: notification_service
-    ports:
-      - "8085:8085"
     environment:
       SERVER_PORT: 8085
       DB_HOST: notification-db
@@ -384,6 +378,7 @@ services:
 # ── Volúmenes ──────────────────────────────────────────────────────────────────
 
 volumes:
+  rabbitmq-data:
   auth-db-data:
   user-db-data:
   event-db-data:
