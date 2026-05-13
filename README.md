@@ -592,18 +592,5 @@ open http://localhost:15672  # guest / guest
 
 ---
 
-## Estado del Proyecto
 
-### Implementado y funcional
-
-- API Gateway con rate limiting y circuit breakers
-- Autenticación JWT (registro, login, roles BUYER/ADMIN — tokens con expiración de 1 hora)
-- Gestión de eventos (CRUD, categorías, imágenes vía Cloudinary — solo ADMIN puede crear/editar/eliminar; solo eventos en estado DRAFT pueden eliminarse)
-- Tipos de ticket con períodos de venta configurables
-- Flujo de compra completo (Saga coreografiada con RabbitMQ)
-- Pagos con Stripe (integración real, moneda USD)
-- Tickets con QR para validación en puerta
-- Notificaciones in-app persistentes (backend completo)
-- Reembolsos (implementado en backend)
-- Frontend completo con React + TypeScript
 
