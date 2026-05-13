@@ -22,7 +22,8 @@ public class TicketTypeRequest {
     @DecimalMin(value = "0.0", inclusive = true, message = "El precio no puede ser negativo")
     private BigDecimal price;
 
-    @Size(max = 3, message = "El código de moneda no puede superar 3 caracteres")
+    @NotBlank(message = "La moneda es obligatoria")
+    @Size(min = 3, max = 3, message = "El código de moneda debe tener exactamente 3 caracteres")
     private String currency = "USD";
 
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
