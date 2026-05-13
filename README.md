@@ -244,9 +244,10 @@ Todos los endpoints pasan por el gateway en `http://localhost:8080`.
 
 ```bash
 # 1. Registrar credenciales
+# La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"secret123","firstName":"Ana","lastName":"López"}'
+  -d '{"email":"user@example.com","password":"Secret123!","firstName":"Ana","lastName":"López"}'
 
 # Respuesta incluye token JWT para crear el perfil
 # { "userId":"...", "email":"...", "token":"eyJ...", "role":"BUYER" }
@@ -420,8 +421,8 @@ open http://localhost:15672  # guest / guest
 ### Implementado y funcional
 
 - [x] API Gateway con rate limiting y circuit breakers
-- [x] Autenticación JWT (registro, login, roles BUYER/ADMIN)
-- [x] Gestión de eventos (CRUD, categorías, imágenes vía Cloudinary)
+- [x] Autenticación JWT (registro, login, roles BUYER/ADMIN — tokens con expiración de 1 hora)
+- [x] Gestión de eventos (CRUD, categorías, imágenes vía Cloudinary — solo ADMIN puede crear/editar/eliminar; solo eventos en estado DRAFT pueden eliminarse)
 - [x] Tipos de ticket con períodos de venta configurables
 - [x] Flujo de compra completo (Saga coreografiada con RabbitMQ)
 - [x] Pagos con Stripe (integración real, moneda USD)
