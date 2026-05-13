@@ -49,8 +49,6 @@ services:
       POSTGRES_DB: auth_db
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5442:5432"
     volumes:
       - auth-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -68,8 +66,6 @@ services:
       POSTGRES_DB: user_db
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5443:5432"
     volumes:
       - user-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -87,8 +83,6 @@ services:
       POSTGRES_DB: event_db
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5444:5432"
     volumes:
       - event-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -106,8 +100,6 @@ services:
       POSTGRES_DB: ticket_db
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5447:5432"
     volumes:
       - ticket-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -125,8 +117,6 @@ services:
       POSTGRES_DB: payment_db
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5445:5432"
     volumes:
       - payment-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -144,8 +134,6 @@ services:
       POSTGRES_DB: notification_db
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5446:5432"
     volumes:
       - notification-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -207,12 +195,10 @@ services:
       context: ./auth-service
       dockerfile: Dockerfile
     container_name: auth_service
-    ports:
-      - "8090:8090"
     environment:
       SERVER_PORT: 8090
       DB_HOST: auth-db
-      DB_PORT: 5432 # Quitar puertos de BD  en producción
+      DB_PORT: 5432
       DB_NAME: auth_db
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -233,8 +219,6 @@ services:
       context: ./user-service
       dockerfile: Dockerfile
     container_name: user_service
-    ports:
-      - "8081:8081"
     environment:
       SERVER_PORT: 8081
       DB_HOST: user-db
@@ -258,8 +242,6 @@ services:
       context: ./event-service
       dockerfile: Dockerfile
     container_name: event_service
-    ports:
-      - "8082:8082"
     environment:
       SERVER_PORT: 8082
       DB_HOST: event-db
@@ -292,8 +274,6 @@ services:
       context: ./ticket-service
       dockerfile: Dockerfile
     container_name: ticket_service
-    ports:
-      - "8083:8083"
     environment:
       SERVER_PORT: 8083
       DB_HOST: ticket-db
@@ -323,8 +303,6 @@ services:
       context: ./payment-service
       dockerfile: Dockerfile
     container_name: payment_service
-    ports:
-      - "8084:8084"
     environment:
       SERVER_PORT: 8084
       DB_HOST: payment-db
@@ -354,8 +332,6 @@ services:
       context: ./notification-service
       dockerfile: Dockerfile
     container_name: notification_service
-    ports:
-      - "8085:8085"
     environment:
       SERVER_PORT: 8085
       DB_HOST: notification-db
