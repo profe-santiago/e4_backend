@@ -27,13 +27,29 @@ const loadUser = (): AuthUser | null => {
   }
 }
 
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
 const storedToken = TokenStorage.get()
-const storedUser = storedToken ? loadUser() : null
+const tokenValid = storedToken ? !isTokenExpired(storedToken) : false
+
+if (!tokenValid && storedToken) {
+  TokenStorage.remove()
+  localStorage.removeItem(USER_KEY)
+}
+
+const storedUser = tokenValid ? loadUser() : null
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: storedUser,
   token: storedToken,
-  isAuthenticated: !!storedToken,
+  isAuthenticated: tokenValid,
   isAdmin: storedUser?.role === 'ADMIN',
 
   setAuth: (user, token) => {

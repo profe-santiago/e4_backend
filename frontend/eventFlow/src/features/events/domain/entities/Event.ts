@@ -1,7 +1,7 @@
 import type { TicketType } from './TicketType'
 import type { Category } from './Category'
 
-export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'SOLD_OUT' | 'CANCELLED' | 'FINISHED'
 
 export interface Event {
   id: string

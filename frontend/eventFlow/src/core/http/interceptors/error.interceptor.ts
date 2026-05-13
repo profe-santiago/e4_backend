@@ -16,7 +16,8 @@ export const applyErrorInterceptor = (client: AxiosInstance): void => {
         // Don't redirect on the login/register calls themselves — let the form handle that error
         if (!url.includes('/auth/')) {
           TokenStorage.remove()
-          window.location.href = '/login'
+          localStorage.removeItem('auth_user')
+          window.location.href = '/'
         }
         return Promise.reject(error)
       }
