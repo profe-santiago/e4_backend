@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { TokenStorage } from '@/core/storage/TokenStorage'
+import { RefreshTokenStorage } from '@/core/storage/RefreshTokenStorage'
 
 const USER_KEY = 'auth_user'
 
@@ -14,7 +15,8 @@ interface AuthState {
   token: string | null
   isAuthenticated: boolean
   isAdmin: boolean
-  setAuth: (user: AuthUser, token: string) => void
+  setAuth: (user: AuthUser, token: string, refreshToken: string) => void
+  updateToken: (token: string, refreshToken: string) => void
   logout: () => void
 }
 
@@ -41,6 +43,7 @@ const tokenValid = storedToken ? !isTokenExpired(storedToken) : false
 
 if (!tokenValid && storedToken) {
   TokenStorage.remove()
+  RefreshTokenStorage.remove()
   localStorage.removeItem(USER_KEY)
 }
 
@@ -48,12 +51,13 @@ const storedUser = tokenValid ? loadUser() : null
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: storedUser,
-  token: storedToken,
+  token: tokenValid ? storedToken : null,
   isAuthenticated: tokenValid,
   isAdmin: storedUser?.role === 'ADMIN',
 
-  setAuth: (user, token) => {
+  setAuth: (user, token, refreshToken) => {
     TokenStorage.set(token)
+    RefreshTokenStorage.set(refreshToken)
     localStorage.setItem(USER_KEY, JSON.stringify(user))
     set({
       user,
@@ -63,8 +67,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     })
   },
 
+  updateToken: (token, refreshToken) => {
+    TokenStorage.set(token)
+    RefreshTokenStorage.set(refreshToken)
+    set({ token })
+  },
+
   logout: () => {
     TokenStorage.remove()
+    RefreshTokenStorage.remove()
     localStorage.removeItem(USER_KEY)
     set({ user: null, token: null, isAuthenticated: false, isAdmin: false })
   },

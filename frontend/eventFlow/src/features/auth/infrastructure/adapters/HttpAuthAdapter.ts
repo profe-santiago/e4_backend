@@ -6,6 +6,7 @@ import { decodeJwtPayload } from '../../domain/entities/AuthResponse'
 interface AuthApiResponse {
   email: string
   token: string
+  refreshToken: string
 }
 
 export class HttpAuthAdapter implements AuthRepository {
