@@ -31,6 +31,11 @@ public class SendOrderConfirmedNotificationUseCase {
     public void execute(SendOrderConfirmedCommand command) {
         log.info("[UC] SendOrderConfirmed → orderId={}, userId={}", command.orderId(), command.userId());
 
+        if (repository.existsByReferenceIdAndType(command.orderId(), NotificationType.PURCHASE_CONFIRMATION)) {
+            log.warn("[UC] Notificación duplicada ignorada → orderId={}, type=PURCHASE_CONFIRMATION", command.orderId());
+            return;
+        }
+
         UserId userId = UserId.of(command.userId());
         int ticketCount = command.tickets() != null ? command.tickets().size() : 0;
 
