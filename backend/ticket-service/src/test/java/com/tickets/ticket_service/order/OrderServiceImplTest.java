@@ -123,15 +123,16 @@ class OrderServiceImplTest {
         }
 
         @Test
-        @DisplayName("debe lanzar InvalidOrderStateException si la orden ya está confirmada")
-        void shouldThrow_whenOrderAlreadyConfirmed() {
+        @DisplayName("debe retornar la orden sin procesar cuando ya está confirmada (idempotencia)")
+        void shouldReturnWithoutProcessing_whenOrderAlreadyConfirmed() {
             pendingOrder.setStatus(OrderStatus.CONFIRMED);
             given(orderRepository.findByIdWithItems(orderId)).willReturn(Optional.of(pendingOrder));
 
-            assertThatThrownBy(() -> useCase.execute(orderId, List.of()))
-                    .isInstanceOf(InvalidOrderStateException.class);
+            Order result = useCase.execute(orderId, List.of());
 
+            assertThat(result.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
             then(generateTickets).should(never()).execute(any());
+            then(eventPublisher).should(never()).publishOrderConfirmed(any(), any(), any(), any(), any());
         }
 
         @Test
@@ -165,7 +166,7 @@ class OrderServiceImplTest {
 
             useCase.execute(orderId, "Sin stock");
 
-            then(eventPublisher).should().publishOrderCancelled(any(), any(), any());
+            then(eventPublisher).should().publishOrderCancelled(any(), any(), any(), any());
         }
     }
 
@@ -191,7 +192,7 @@ class OrderServiceImplTest {
             Order result = useCase.execute(orderId, userId, false);
 
             assertThat(result.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-            then(eventPublisher).should().publishOrderCancelled(any(), any(), any());
+            then(eventPublisher).should().publishOrderCancelled(any(), any(), any(), any());
         }
 
         @Test

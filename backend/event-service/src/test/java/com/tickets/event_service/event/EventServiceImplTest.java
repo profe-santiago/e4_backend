@@ -1,27 +1,28 @@
 package com.tickets.event_service.event;
 
-import com.tickets.event_service.category.CategoryRepository;
-import com.tickets.event_service.event.dto.CreateEventRequest;
-import com.tickets.event_service.event.dto.EventResponse;
-import com.tickets.event_service.event.dto.UpdateEventRequest;
+import com.tickets.event_service.category.domain.CategoryRepository;
+import com.tickets.event_service.event.application.ChangeEventStatusUseCase;
+import com.tickets.event_service.event.application.CreateEventUseCase;
+import com.tickets.event_service.event.application.DeleteEventUseCase;
+import com.tickets.event_service.event.application.GetEventByIdUseCase;
+import com.tickets.event_service.event.application.ListPublishedEventsUseCase;
+import com.tickets.event_service.event.application.UpdateEventUseCase;
+import com.tickets.event_service.event.application.dto.CreateEventCommand;
+import com.tickets.event_service.event.application.dto.UpdateEventCommand;
+import com.tickets.event_service.event.domain.Event;
+import com.tickets.event_service.event.domain.EventRepository;
+import com.tickets.event_service.event.domain.EventStatus;
 import com.tickets.event_service.exception.EventNotFoundException;
 import com.tickets.event_service.exception.InvalidEventStatusTransitionException;
 import com.tickets.event_service.exception.UnauthorizedActionException;
-import com.tickets.event_service.shared.PaginatedResponse;
+import com.tickets.event_service.shared.PageResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,24 +37,15 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("EventServiceImpl")
+@DisplayName("Event UseCases")
 class EventServiceImplTest {
 
-    @Mock
-    private EventRepository eventRepository;
-
-    @Mock
-    private CategoryRepository categoryRepository;
-
-    @InjectMocks
-    private EventServiceImpl eventService;
+    @Mock private EventRepository eventRepository;
+    @Mock private CategoryRepository categoryRepository;
 
     private UUID organizerId;
     private UUID eventId;
     private Event existingEvent;
-    private Authentication organizerAuth;
-    private Authentication anotherUserAuth;
-    private Authentication adminAuth;
 
     @BeforeEach
     void setUp() {
@@ -69,42 +61,55 @@ class EventServiceImplTest {
         existingEvent.setCountry("Argentina");
         existingEvent.setStartDate(LocalDateTime.now().plusDays(30));
         existingEvent.setStatus(EventStatus.DRAFT);
-
-        organizerAuth   = buildAuth(organizerId, "BUYER");
-        anotherUserAuth = buildAuth(UUID.randomUUID(), "BUYER");
-        adminAuth       = buildAuth(UUID.randomUUID(), "ADMIN");
     }
 
     @Nested
-    @DisplayName("create")
+    @DisplayName("CreateEventUseCase")
     class Create {
 
+        private CreateEventUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new CreateEventUseCase(eventRepository, categoryRepository);
+        }
+
         @Test
-        @DisplayName("debe crear el evento con el organizerId del JWT")
-        void shouldCreate_withOrganizerIdFromJwt() {
-            CreateEventRequest request = buildCreateRequest();
+        @DisplayName("debe crear el evento con el organizerId indicado")
+        void shouldCreate_withOrganizerId() {
+            CreateEventCommand command = new CreateEventCommand(
+                    organizerId, "Rock en el Parque", null, null,
+                    "Estadio Nacional", "Buenos Aires", "Argentina",
+                    LocalDateTime.now().plusDays(30), null, null);
             given(eventRepository.save(any(Event.class))).willReturn(existingEvent);
 
-            EventResponse response = eventService.create(request, organizerAuth);
+            Event result = useCase.execute(command);
 
-            assertThat(response.getOrganizerId()).isEqualTo(organizerId);
+            assertThat(result.getOrganizerId()).isEqualTo(organizerId);
             then(eventRepository).should().save(any(Event.class));
         }
     }
 
     @Nested
-    @DisplayName("findById")
+    @DisplayName("GetEventByIdUseCase")
     class FindById {
+
+        private GetEventByIdUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new GetEventByIdUseCase(eventRepository);
+        }
 
         @Test
         @DisplayName("debe retornar el evento cuando existe")
         void shouldReturn_whenFound() {
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
-            EventResponse response = eventService.findById(eventId);
+            Event result = useCase.execute(eventId);
 
-            assertThat(response.getId()).isEqualTo(eventId);
-            assertThat(response.getTitle()).isEqualTo("Rock en el Parque");
+            assertThat(result.getId()).isEqualTo(eventId);
+            assertThat(result.getTitle()).isEqualTo("Rock en el Parque");
         }
 
         @Test
@@ -113,43 +118,58 @@ class EventServiceImplTest {
             UUID unknownId = UUID.randomUUID();
             given(eventRepository.findById(unknownId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> eventService.findById(unknownId))
+            assertThatThrownBy(() -> useCase.execute(unknownId))
                     .isInstanceOf(EventNotFoundException.class)
                     .hasMessageContaining(unknownId.toString());
         }
     }
 
     @Nested
-    @DisplayName("findPublished")
+    @DisplayName("ListPublishedEventsUseCase")
     class FindPublished {
+
+        private ListPublishedEventsUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new ListPublishedEventsUseCase(eventRepository);
+        }
 
         @Test
         @DisplayName("debe retornar página de eventos publicados")
         void shouldReturnPage_ofPublishedEvents() {
-            Page<Event> page = new PageImpl<>(List.of(existingEvent));
-            given(eventRepository.findAllByStatusWithCategory(any(), any(Pageable.class))).willReturn(page);
+            PageResult<Event> page = new PageResult<>(List.of(existingEvent), 1, 1, 0, 20);
+            given(eventRepository.findPublished(any(EventStatus.class), any(), any(Integer.class), any(Integer.class)))
+                    .willReturn(page);
 
-            PaginatedResponse<EventResponse> response = eventService.findPublished(null, 0, 20);
+            PageResult<Event> result = useCase.execute(null, 0, 20);
 
-            assertThat(response.content()).hasSize(1);
-            assertThat(response.totalElements()).isEqualTo(1);
+            assertThat(result.items()).hasSize(1);
+            assertThat(result.totalElements()).isEqualTo(1);
         }
     }
 
     @Nested
-    @DisplayName("update")
+    @DisplayName("UpdateEventUseCase")
     class Update {
+
+        private UpdateEventUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new UpdateEventUseCase(eventRepository, categoryRepository);
+        }
 
         @Test
         @DisplayName("debe actualizar cuando el requester es el organizador")
         void shouldUpdate_whenRequesterIsOrganizer() {
-            UpdateEventRequest request = new UpdateEventRequest();
-            request.setTitle("Nuevo Título");
-
+            UpdateEventCommand command = new UpdateEventCommand(
+                    organizerId, false, "Nuevo Título",
+                    null, null, null, null, null, null, null, null);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
             given(eventRepository.save(any(Event.class))).willReturn(existingEvent);
 
-            eventService.update(eventId, request, organizerAuth);
+            useCase.execute(eventId, command);
 
             then(eventRepository).should().save(any(Event.class));
         }
@@ -157,13 +177,13 @@ class EventServiceImplTest {
         @Test
         @DisplayName("debe actualizar cuando el requester es ADMIN")
         void shouldUpdate_whenRequesterIsAdmin() {
-            UpdateEventRequest request = new UpdateEventRequest();
-            request.setTitle("Nuevo Título");
-
+            UpdateEventCommand command = new UpdateEventCommand(
+                    UUID.randomUUID(), true, "Nuevo Título",
+                    null, null, null, null, null, null, null, null);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
             given(eventRepository.save(any(Event.class))).willReturn(existingEvent);
 
-            eventService.update(eventId, request, adminAuth);
+            useCase.execute(eventId, command);
 
             then(eventRepository).should().save(any(Event.class));
         }
@@ -171,9 +191,12 @@ class EventServiceImplTest {
         @Test
         @DisplayName("debe lanzar UnauthorizedActionException cuando el requester no es dueño ni ADMIN")
         void shouldThrow_whenRequesterIsNotOwnerNorAdmin() {
+            UpdateEventCommand command = new UpdateEventCommand(
+                    UUID.randomUUID(), false, "Nuevo Título",
+                    null, null, null, null, null, null, null, null);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
-            assertThatThrownBy(() -> eventService.update(eventId, new UpdateEventRequest(), anotherUserAuth))
+            assertThatThrownBy(() -> useCase.execute(eventId, command))
                     .isInstanceOf(UnauthorizedActionException.class);
 
             then(eventRepository).should(never()).save(any());
@@ -181,8 +204,15 @@ class EventServiceImplTest {
     }
 
     @Nested
-    @DisplayName("changeStatus")
+    @DisplayName("ChangeEventStatusUseCase")
     class ChangeStatus {
+
+        private ChangeEventStatusUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new ChangeEventStatusUseCase(eventRepository);
+        }
 
         @Test
         @DisplayName("debe cambiar de DRAFT a PUBLISHED cuando la transición es válida")
@@ -190,7 +220,7 @@ class EventServiceImplTest {
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
             given(eventRepository.save(any(Event.class))).willReturn(existingEvent);
 
-            eventService.changeStatus(eventId, EventStatus.PUBLISHED, organizerAuth);
+            useCase.execute(eventId, EventStatus.PUBLISHED, organizerId, false);
 
             then(eventRepository).should().save(any(Event.class));
         }
@@ -201,7 +231,7 @@ class EventServiceImplTest {
             existingEvent.setStatus(EventStatus.CANCELLED);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
-            assertThatThrownBy(() -> eventService.changeStatus(eventId, EventStatus.PUBLISHED, organizerAuth))
+            assertThatThrownBy(() -> useCase.execute(eventId, EventStatus.PUBLISHED, organizerId, false))
                     .isInstanceOf(InvalidEventStatusTransitionException.class)
                     .hasMessageContaining("CANCELLED");
 
@@ -210,15 +240,22 @@ class EventServiceImplTest {
     }
 
     @Nested
-    @DisplayName("delete")
+    @DisplayName("DeleteEventUseCase")
     class Delete {
+
+        private DeleteEventUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new DeleteEventUseCase(eventRepository);
+        }
 
         @Test
         @DisplayName("debe eliminar el evento cuando el requester es el organizador")
         void shouldDelete_whenOrganizer() {
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
-            eventService.delete(eventId, organizerAuth);
+            useCase.execute(eventId, organizerId, false);
 
             then(eventRepository).should().delete(existingEvent);
         }
@@ -228,29 +265,10 @@ class EventServiceImplTest {
         void shouldThrow_whenUnauthorized() {
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
-            assertThatThrownBy(() -> eventService.delete(eventId, anotherUserAuth))
+            assertThatThrownBy(() -> useCase.execute(eventId, UUID.randomUUID(), false))
                     .isInstanceOf(UnauthorizedActionException.class);
 
             then(eventRepository).should(never()).delete(any());
         }
-    }
-
-    // ─── helpers ────────────────────────────────────────────────────────────
-
-    private Authentication buildAuth(UUID userId, String role) {
-        return new UsernamePasswordAuthenticationToken(
-                userId.toString(), null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
-        );
-    }
-
-    private CreateEventRequest buildCreateRequest() {
-        CreateEventRequest req = new CreateEventRequest();
-        req.setTitle("Rock en el Parque");
-        req.setVenue("Estadio Nacional");
-        req.setCity("Buenos Aires");
-        req.setCountry("Argentina");
-        req.setStartDate(LocalDateTime.now().plusDays(30));
-        return req;
     }
 }

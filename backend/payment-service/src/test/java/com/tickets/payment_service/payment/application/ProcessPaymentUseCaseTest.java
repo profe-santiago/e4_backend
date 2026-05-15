@@ -56,14 +56,14 @@ class ProcessPaymentUseCaseTest {
         );
     }
 
-    @BeforeEach
-    void stubSave() {
-        given(paymentRepository.save(any(Payment.class))).willAnswer(inv -> inv.getArgument(0));
-    }
-
     @Nested
     @DisplayName("execute — orden nueva")
     class NuevaOrden {
+
+        @BeforeEach
+        void stubSave() {
+            given(paymentRepository.save(any(Payment.class))).willAnswer(inv -> inv.getArgument(0));
+        }
 
         @Test
         @DisplayName("Stripe exitoso → pago APPROVED + publica PaymentCompletedEvent")

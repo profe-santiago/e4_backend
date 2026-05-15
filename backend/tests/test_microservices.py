@@ -38,6 +38,16 @@ def ts():
 
 
 @pytest.fixture(scope="session")
+def profile_creds(ts):
+    """Usuario dedicado para tests de perfil (distinto de buyer/organizer)."""
+    email = f"profile_{ts}@test.com"
+    r = requests.post(f"{GW}/api/v1/auth/register",
+                      json={"email": email, "password": PASSWORD}, timeout=30)
+    assert r.status_code == 201, f"Registro profile user falló: {r.text}"
+    return {"token": r.json()["token"], "email": email}
+
+
+@pytest.fixture(scope="session")
 def published_event(organizer_token, ts):
     """Crea y publica un evento. Compartido entre tests."""
     start_date = "2027-06-15T20:00:00"
@@ -207,3 +217,54 @@ def test_5_security_unauthorized():
         assert r.status_code in (401, 403), (
             f"{method} {url} con token inválido devolvió {r.status_code}, se esperaba 401/403"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST 6 — CRUD de perfil de usuario: crear y leer
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_6_user_profile_create_and_read(profile_creds):
+    """Crea un perfil de usuario y lo recupera con GET /me."""
+    token = profile_creds["token"]
+    email = profile_creds["email"]
+
+    # Crear perfil
+    r = requests.post(
+        f"{GW}/api/v1/users",
+        json={"firstName": "Test", "lastName": "Usuario", "email": email},
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30,
+    )
+    assert r.status_code == 201, f"Crear perfil falló ({r.status_code}): {r.text}"
+    data = r.json()
+    assert data["firstName"] == "Test"
+    assert data["email"] == email
+
+    # Leer perfil propio
+    r = requests.get(
+        f"{GW}/api/v1/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"GET /users/me falló: {r.text}"
+    assert r.json()["email"] == email
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST 7 — CRUD de perfil de usuario: actualizar
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_7_user_profile_update(profile_creds):
+    """Actualiza el perfil propio y verifica los nuevos valores."""
+    token = profile_creds["token"]
+
+    r = requests.put(
+        f"{GW}/api/v1/users/me",
+        json={"firstName": "Actualizado", "lastName": "Apellido", "phone": "1122334455"},
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"PUT /users/me falló ({r.status_code}): {r.text}"
+    data = r.json()
+    assert data["firstName"] == "Actualizado", f"firstName no se actualizó: {data}"
+    assert data["lastName"] == "Apellido", f"lastName no se actualizó: {data}"
