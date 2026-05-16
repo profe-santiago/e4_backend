@@ -58,7 +58,7 @@ class TicketTypeServiceImplTest {
 
         existingTicketType = TicketType.create(
                 eventId, "VIP", null,
-                Money.ofUSD(new BigDecimal("150.00")), 100);
+                Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
         existingTicketType.setId(1L);
     }
 
@@ -78,7 +78,7 @@ class TicketTypeServiceImplTest {
         void shouldCreate_whenOrganizer() {
             CreateTicketTypeCommand command = new CreateTicketTypeCommand(
                     eventId, organizerId, false,
-                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100);
+                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
             given(ticketTypeRepository.save(any(TicketType.class))).willReturn(existingTicketType);
 
@@ -94,7 +94,7 @@ class TicketTypeServiceImplTest {
         void shouldThrow_whenNotOrganizer() {
             CreateTicketTypeCommand command = new CreateTicketTypeCommand(
                     eventId, UUID.randomUUID(), false,
-                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100);
+                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
             assertThatThrownBy(() -> useCase.execute(command))
@@ -109,7 +109,7 @@ class TicketTypeServiceImplTest {
             UUID unknownId = UUID.randomUUID();
             CreateTicketTypeCommand command = new CreateTicketTypeCommand(
                     unknownId, organizerId, false,
-                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100);
+                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
             given(eventRepository.findById(unknownId)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> useCase.execute(command))

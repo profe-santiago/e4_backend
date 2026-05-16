@@ -32,6 +32,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -139,10 +140,10 @@ class EventServiceImplTest {
         @DisplayName("debe retornar página de eventos publicados")
         void shouldReturnPage_ofPublishedEvents() {
             PageResult<Event> page = new PageResult<>(List.of(existingEvent), 1, 1, 0, 20);
-            given(eventRepository.findPublished(any(EventStatus.class), any(), any(Integer.class), any(Integer.class)))
+            given(eventRepository.findPublished(any(EventStatus.class), any(), any(), any(), any(), anyInt(), anyInt()))
                     .willReturn(page);
 
-            PageResult<Event> result = useCase.execute(null, 0, 20);
+            PageResult<Event> result = useCase.execute(null, null, null, null, 0, 20);
 
             assertThat(result.items()).hasSize(1);
             assertThat(result.totalElements()).isEqualTo(1);
