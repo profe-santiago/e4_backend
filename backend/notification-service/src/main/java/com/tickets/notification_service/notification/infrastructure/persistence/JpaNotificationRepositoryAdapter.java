@@ -1,6 +1,7 @@
 package com.tickets.notification_service.notification.infrastructure.persistence;
 
 import com.tickets.notification_service.notification.domain.Notification;
+import com.tickets.notification_service.notification.domain.NotificationType;
 import com.tickets.notification_service.notification.domain.UserId;
 import com.tickets.notification_service.notification.domain.port.NotificationRepository;
 import org.springframework.data.domain.PageRequest;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 class JpaNotificationRepositoryAdapter implements NotificationRepository {
@@ -41,5 +43,10 @@ class JpaNotificationRepositoryAdapter implements NotificationRepository {
     @Override
     public long countByUserId(UserId userId) {
         return jpaRepository.countByUserId(userId.value());
+    }
+
+    @Override
+    public boolean existsByReferenceIdAndType(UUID referenceId, NotificationType type) {
+        return jpaRepository.existsByReferenceIdAndType(referenceId, type);
     }
 }

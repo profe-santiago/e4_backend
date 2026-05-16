@@ -31,6 +31,11 @@ public class SendOrderCancelledNotificationUseCase {
     public void execute(SendOrderCancelledCommand command) {
         log.info("[UC] SendOrderCancelled → orderId={}, userId={}", command.orderId(), command.userId());
 
+        if (repository.existsByReferenceIdAndType(command.orderId(), NotificationType.EVENT_CANCELLED)) {
+            log.warn("[UC] Notificación duplicada ignorada → orderId={}, type=EVENT_CANCELLED", command.orderId());
+            return;
+        }
+
         UserId userId = UserId.of(command.userId());
         String reason = command.reason() != null ? command.reason() : "Error en el procesamiento";
 

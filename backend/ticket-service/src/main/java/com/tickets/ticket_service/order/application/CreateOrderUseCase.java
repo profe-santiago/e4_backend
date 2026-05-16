@@ -1,5 +1,6 @@
 package com.tickets.ticket_service.order.application;
 
+import com.tickets.ticket_service.exception.DuplicateOrderException;
 import com.tickets.ticket_service.order.application.dto.CreateOrderCommand;
 import com.tickets.ticket_service.order.domain.Order;
 import com.tickets.ticket_service.order.domain.OrderEventPublisher;
@@ -26,6 +27,10 @@ public class CreateOrderUseCase {
     }
 
     public Order execute(CreateOrderCommand command) {
+        if (orderRepository.existsByPaymentIntentId(command.paymentIntentId())) {
+            throw new DuplicateOrderException(command.paymentIntentId());
+        }
+
         List<OrderItem> items = command.items().stream()
                 .map(i -> OrderItem.create(i.eventId(), i.ticketTypeId(), i.quantity()))
                 .toList();

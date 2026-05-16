@@ -2,6 +2,8 @@ package com.tickets.event_service.event.application;
 
 import com.tickets.event_service.event.domain.Event;
 import com.tickets.event_service.event.domain.EventRepository;
+import com.tickets.event_service.event.domain.EventStatus;
+import com.tickets.event_service.exception.EventNotDeletableException;
 import com.tickets.event_service.exception.EventNotFoundException;
 import com.tickets.event_service.exception.UnauthorizedActionException;
 import com.tickets.event_service.shared.UseCase;
@@ -23,6 +25,10 @@ public class DeleteEventUseCase {
 
         if (!isAdmin && !event.getOrganizerId().equals(requesterId)) {
             throw new UnauthorizedActionException("No tenés permisos para eliminar este evento");
+        }
+
+        if (event.getStatus() != EventStatus.DRAFT) {
+            throw new EventNotDeletableException(event.getStatus());
         }
 
         eventRepository.delete(event);

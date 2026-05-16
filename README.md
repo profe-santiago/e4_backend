@@ -8,26 +8,51 @@ Sistema completo de venta de entradas para eventos, construido con microservicio
 
 ## Arquitectura General
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                      │
-│          Vite · React Query · Zustand · Stripe Elements      │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ HTTP
-┌─────────────────────▼───────────────────────────────────────┐
-│                    API Gateway :8080                         │
-│            Rate Limiting · CORS · Circuit Breakers           │
-└──┬──────────┬──────────┬──────────┬──────────┬──────────────┘
-   │          │          │          │          │
-:8090      :8081      :8082      :8083      :8084   :8085
-auth     user      event    ticket   payment  notif
-service  service   service  service  service  service
-   │          │          │          │          │
- auth_db  user_db  event_db  ticket_db payment_db notif_db
-(5442)   (5443)   (5444)    (5447)    (5445)   (5446)
+### Diagrama de infraestructura completo
 
-              RabbitMQ :5672 / UI :15672
-              Redis     :6379
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                      Cliente (Navegador)                           │
+│           React 19 · TypeScript · Vite · Stripe Elements          │
+└────────────────────────────┬───────────────────────────────────────┘
+                             │ HTTP  :5173 → :8080
+┌────────────────────────────▼───────────────────────────────────────┐   ┌───────────────┐
+│                     API Gateway  :8080                             │──►│  Redis  :6379 │
+│       JWT Validation · Rate Limiting · Circuit Breakers (R4J)      │   │  (rate limit) │
+└──┬──────────┬──────────┬──────────┬──────────┬─────────────────────┘   └───────────────┘
+   │          │          │          │          │          │
+:8090      :8081      :8082      :8083      :8084      :8085
+   │          │          │          │          │          │
+┌──┴──────┐ ┌─┴──────┐ ┌─┴──────┐ ┌─┴──────┐ ┌─┴──────┐ ┌─┴──────────────┐
+│  auth   │ │  user  │ │ event  │ │ticket  │ │payment │ │ notification   │
+│ service │ │service │ │service │ │service │ │service │ │   service      │
+└──┬──────┘ └─┬──────┘ └─┬──────┘ └─┬──────┘ └─┬──────┘ └─┬──────────────┘
+   │          │          │          │          │          │
+auth_db    user_db   event_db  ticket_db payment_db notif_db
+:5442      :5443     :5444     :5447     :5445     :5446
+               ▲                                        │
+               └──────── HTTP GET /users/{id} ──────────┘
+                      (notif-service consulta perfil)
+
+         ┌──────────────────────────────────────────────────────┐
+         │                   RabbitMQ  :5672                    │
+         │           tickets.topic.exchange  +  DLQ             │
+         │                                                      │
+         │  Routing Key            Productor → Consumidor(es)   │
+         │  ─────────────────────────────────────────────────   │
+         │  stock.reserve          ticket-svc → event-svc       │
+         │  stock.reserved         event-svc  → ticket-svc      │
+         │  stock.reservation.failed event-svc→ ticket-svc      │
+         │  order.confirmed        ticket-svc → payment-svc     │
+         │                         ticket-svc → notif-svc       │
+         │  payment.completed      payment-svc→ ticket-svc      │
+         │                         payment-svc→ notif-svc       │
+         │  payment.failed         payment-svc→ ticket-svc      │
+         │                         payment-svc→ notif-svc       │
+         │  order.cancelled        ticket-svc → notif-svc       │
+         │  refund.completed       payment-svc→ notif-svc       │
+         │  refund.failed          payment-svc→ notif-svc       │
+         └──────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -57,11 +82,54 @@ service  service   service  service  service  service
 
 ## Patrones de Diseño
 
-- **Clean Architecture / Hexagonal**: capas `domain` → `application` → `infrastructure` en cada servicio
-- **Domain-Driven Design (DDD)**: Aggregate Roots, Value Objects, Rich Domain Models
-- **Saga Coreografiada**: flujo de compra distribuido con eventos en RabbitMQ
-- **CQRS Light**: separación de comandos y queries en la capa de aplicación
-- **Database-per-Service**: cada microservicio tiene su propia base de datos PostgreSQL
+### Patrones Arquitecturales
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Clean Architecture / Hexagonal** | Cada microservicio organiza su código en tres capas concéntricas: `domain` (núcleo, sin dependencias externas) → `application` (casos de uso) → `infrastructure` (adaptadores JPA, REST, RabbitMQ) |
+| **Domain-Driven Design (DDD)** | Cada servicio es un Bounded Context con su propia entidad raíz (Aggregate Root), Value Objects y lenguaje ubicuo |
+| **Saga Coreografiada** | El flujo de compra se coordina mediante eventos RabbitMQ entre microservicios; no hay un orquestador central. Cada servicio reacciona a eventos y emite nuevos eventos |
+| **CQRS Light** | Los casos de uso separan comandos (`CreateEventUseCase`, `RegisterUseCase`) de queries (`ListEventsUseCase`, `GetOrderUseCase`) en clases independientes |
+| **Database-per-Service** | Cada microservicio tiene su propia base de datos PostgreSQL aislada; ningún servicio accede directamente a la BD de otro |
+
+### Patrones GoF — Creacionales
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Factory Method** | Los Aggregate Roots exponen métodos de fábrica estáticos en lugar de constructores públicos: `Credential.create()`, `RefreshToken.create()`, `Event.create()`. Encapsulan la lógica de inicialización y garantizan invariantes desde la creación |
+| **Builder** | Los DTOs de respuesta usan `@Builder` de Lombok: `AuthResponse.builder().token(...).role(...).build()`. Permite construir objetos complejos con campos opcionales de forma legible |
+
+### Patrones GoF — Estructurales
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Adapter** | Toda la capa `infrastructure/` adapta tecnologías externas a contratos del dominio. Ejemplos: `JpaCredentialRepository` adapta Spring Data JPA al puerto `CredentialRepository`; `HttpAuthAdapter` adapta Axios al puerto `AuthRepository`; `UserHttpGateway` adapta `RestClient` al puerto `UserGateway` |
+| **Facade** | El `api-gateway` actúa como fachada unificada del sistema: expone un único punto de entrada (`localhost:8080`) y oculta la topología interna de los seis microservicios al cliente |
+
+### Patrones GoF — De Comportamiento
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Strategy** | El puerto `PasswordHasher` define el contrato de hashing sin atarse a ningún algoritmo. La implementación concreta `BcryptPasswordHasher` puede reemplazarse por otra estrategia sin modificar los casos de uso |
+| **Chain of Responsibility** | Los filtros de Spring Security procesan cada request en cadena (JWT filter → authorization filter). En el frontend, los interceptores de Axios (`jwt.interceptor` → `error.interceptor`) forman una cadena que enriquece y valida cada request/response |
+| **Observer / Event-Driven** | Los microservicios publican eventos de dominio en RabbitMQ (`order.confirmed`, `payment.completed`, `refund.completed`) y los consumidores interesados reaccionan de forma desacoplada sin que el publicador conozca a sus suscriptores |
+
+### Patrones de Arquitectura Empresarial
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Repository** | Interfaces de dominio (`CredentialRepository`, `EventRepository`, `OrderRepository`) abstraen completamente la persistencia; los casos de uso no conocen JPA ni SQL |
+| **DTO (Data Transfer Object)** | DTOs de request/response en cada adaptador REST evitan exponer las entidades de dominio. Cada capa define sus propios contratos de datos |
+| **Mapper** | Clases dedicadas (`CredentialPersistenceMapper`, `AuthRestMapper`) traducen entre capas sin acoplarlas directamente |
+| **Port & Adapter** | Los puertos son interfaces puras en el dominio (`TokenService`, `PasswordHasher`, `UserGateway`); los adaptadores son implementaciones en infraestructura que pueden sustituirse sin tocar el núcleo |
+
+### Patrones de Frontend
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Custom Hooks** | Encapsulan lógica de negocio y estado local (`useLogin`, `useLogout`, `useEvents`, `useCreateOrder`). Los componentes UI solo consumen el hook sin conocer la implementación |
+| **Dependency Injection vía Context** | `AuthContext` y `UserCreationContext` proveen los adaptadores HTTP a los casos de uso. Los componentes obtienen las dependencias por contexto en lugar de instanciarlas directamente |
+| **Store (Flux/Zustand)** | Estado global de autenticación centralizado en `auth.store`. Los componentes suscriben solo las partes del estado que necesitan, evitando re-renders innecesarios |
 
 ---
 
@@ -246,9 +314,10 @@ Todos los endpoints pasan por el gateway en `http://localhost:8080`.
 
 ```bash
 # 1. Registrar credenciales
+# La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"secret123","firstName":"Ana","lastName":"López"}'
+  -d '{"email":"user@example.com","password":"Secret123!","firstName":"Ana","lastName":"López"}'
 
 # Respuesta incluye token JWT para crear el perfil
 # { "userId":"...", "email":"...", "token":"eyJ...", "role":"BUYER" }
@@ -396,6 +465,114 @@ service-name/
 
 ---
 
+## Arquitectura Hexagonal — Demostración
+
+La regla central es que **el dominio no conoce nada externo**: ni Spring, ni JPA, ni HTTP. Las dependencias siempre apuntan hacia adentro.
+
+```
+domain ← application ← infrastructure
+  ↑            ↑              ↓
+(núcleo)  (casos de uso)  (Spring, JPA, HTTP)
+```
+
+### 1. Dominio — sin dependencias externas
+
+El dominio solo usa Java estándar. No hay `@Component`, no hay `import org.springframework.*`, no hay `import jakarta.persistence.*`.
+
+```java
+// auth-service · credential/domain/Credential.java
+package com.tickets.auth_service.credential.domain;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class Credential {                  // POJO puro
+    private UUID userId;
+    private String email;
+    private String passwordHash;
+    private String role;
+
+    public static Credential create(String email, String hash) {  // Factory Method
+        Credential c = new Credential();
+        c.userId    = UUID.randomUUID();
+        c.email     = email;
+        c.passwordHash = hash;
+        c.role      = "BUYER";
+        return c;
+    }
+}
+```
+
+### 2. Puertos — interfaces puras en el dominio
+
+Los puertos definen *qué* necesita el dominio, sin importar *cómo* se implementa.
+
+```java
+// auth-service · credential/domain/CredentialRepository.java  ← Puerto secundario
+public interface CredentialRepository {
+    Optional<Credential> findById(Long id);
+    Optional<Credential> findByEmail(String email);
+    boolean existsByEmail(String email);
+    Credential save(Credential credential);
+}
+
+// auth-service · credential/domain/PasswordHasher.java  ← Puerto secundario
+public interface PasswordHasher {
+    String hash(String plainPassword);
+    boolean matches(String plain, String hash);
+}
+```
+
+### 3. Casos de uso — dependen solo de puertos
+
+Los casos de uso orquestan la lógica recibiendo los puertos por constructor (inyección de dependencias invertida).
+
+```java
+// auth-service · credential/application/LoginUseCase.java
+@UseCase   // anotación propia, no @Service de Spring
+public class LoginUseCase {
+    private final CredentialRepository credentialRepository;  // interfaz del dominio
+    private final PasswordHasher passwordHasher;              // interfaz del dominio
+    private final TokenService tokenService;                  // interfaz del dominio
+
+    public AuthResult execute(LoginCommand command) {
+        Credential credential = credentialRepository.findByEmail(command.email())
+            .orElseThrow(InvalidCredentialsException::new);
+        // ... lógica de negocio pura
+    }
+}
+```
+
+### 4. Adaptadores — implementan los puertos en infraestructura
+
+Los adaptadores viven en `infrastructure/` y son los únicos que conocen Spring, JPA, HTTP, etc.
+
+```java
+// auth-service · credential/infrastructure/persistence/JpaCredentialRepository.java
+@Repository                                          // ← Spring solo aquí
+public class JpaCredentialRepository implements CredentialRepository {   // implementa el puerto
+    private final SpringDataCredentialRepository springData;             // Spring Data JPA
+
+    @Override
+    public Optional<Credential> findByEmail(String email) {
+        return springData.findByEmail(email).map(mapper::toDomain);      // adapta JPA → dominio
+    }
+}
+
+// auth-service · credential/infrastructure/security/BcryptPasswordHasher.java
+@Component
+public class BcryptPasswordHasher implements PasswordHasher {   // implementa el puerto
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    @Override
+    public String hash(String plain) { return encoder.encode(plain); }
+}
+```
+
+El mismo patrón se repite en todos los microservicios: `event-service`, `ticket-service`, `payment-service`, `notification-service` y `user-service`.
+
+---
+
 ## Testing
 
 ### Tests unitarios (Java)
@@ -403,7 +580,6 @@ service-name/
 Los 6 microservicios tienen tests unitarios con **JUnit 5 + Mockito** que prueban la lógica de negocio de forma aislada, sin base de datos ni servicios externos.
 
 ```bash
-# Ejecutar tests y generar reporte de cobertura de un servicio
 cd backend/auth-service && ./gradlew test
 cd backend/event-service && ./gradlew test
 cd backend/ticket-service && ./gradlew test
@@ -419,15 +595,12 @@ backend/<servicio>/build/reports/jacoco/test/html/index.html
 
 ### Tests de integración E2E (Python)
 
-7 tests de integración que prueban los endpoints HTTP reales cubriendo los flujos críticos: autenticación, eventos, órdenes, pagos y perfiles de usuario.
+7 tests que prueban los endpoints HTTP reales cubriendo los flujos críticos: autenticación, eventos, órdenes, pagos y perfiles de usuario.
 
 **Requisito:** tener los contenedores corriendo (`docker compose up -d`)
 
 ```bash
-# Instalar dependencias
 pip install -r backend/tests/requirements.txt
-
-# Ejecutar tests E2E
 python -m pytest backend/tests/test_microservices.py -v
 ```
 
@@ -454,18 +627,5 @@ open http://localhost:15672  # guest / guest
 
 ---
 
-## Estado del Proyecto
 
-### Implementado y funcional
-
-- [x] API Gateway con rate limiting y circuit breakers
-- [x] Autenticación JWT (registro, login, roles BUYER/ADMIN)
-- [x] Gestión de eventos (CRUD, categorías, imágenes vía Cloudinary)
-- [x] Tipos de ticket con períodos de venta configurables
-- [x] Flujo de compra completo (Saga coreografiada con RabbitMQ)
-- [x] Pagos con Stripe (integración real, moneda USD)
-- [x] Tickets con QR para validación en puerta
-- [x] Notificaciones in-app persistentes (backend completo)
-- [x] Reembolsos (implementado en backend)
-- [x] Frontend completo con React + TypeScript
 

@@ -31,6 +31,11 @@ public class SendRefundFailedNotificationUseCase {
     public void execute(SendRefundFailedCommand command) {
         log.info("[UC] SendRefundFailed → orderId={}, userId={}", command.orderId(), command.userId());
 
+        if (repository.existsByReferenceIdAndType(command.orderId(), NotificationType.REFUND_FAILED)) {
+            log.warn("[UC] Notificación duplicada ignorada → orderId={}, type=REFUND_FAILED", command.orderId());
+            return;
+        }
+
         UserId userId = UserId.of(command.userId());
         String reason = command.reason() != null ? command.reason() : "Error interno al procesar el reembolso";
 

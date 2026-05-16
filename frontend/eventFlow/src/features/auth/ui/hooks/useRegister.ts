@@ -27,7 +27,7 @@ export const useRegister = () => {
     try {
       const useCase = new RegisterUseCase(authRepository, userCreationPort)
       const result = await useCase.execute(data)
-      setAuth({ userId: result.userId, email: result.email, role: result.role }, result.token)
+      setAuth({ userId: result.userId, email: result.email, role: result.role }, result.token, result.refreshToken)
       navigate('/')
     } catch (error) {
       if (axios.isAxiosError(error)) {

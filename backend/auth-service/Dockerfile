@@ -6,6 +6,8 @@ RUN --mount=type=cache,id=gradle-auth,target=/root/.gradle \
 RUN find build/libs -name "*.jar" ! -name "*-plain.jar" -exec mv {} build/libs/app.jar \;
 
 FROM eclipse-temurin:21-jre-alpine
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
 WORKDIR /app
 COPY --from=builder /app/build/libs/app.jar app.jar
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Xmx512m", "-jar", "app.jar"]

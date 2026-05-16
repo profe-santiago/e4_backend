@@ -9,13 +9,17 @@ import { formatDateShort } from '@/shared/utils/formatDate'
 const statusLabel: Record<EventStatus, string> = {
   DRAFT:     'Borrador',
   PUBLISHED: 'Publicado',
+  SOLD_OUT:  'Agotado',
   CANCELLED: 'Cancelado',
+  FINISHED:  'Finalizado',
 }
 
 const statusColor: Record<EventStatus, string> = {
   DRAFT:     '#d69e2e',
   PUBLISHED: '#38a169',
+  SOLD_OUT:  '#805ad5',
   CANCELLED: '#718096',
+  FINISHED:  '#4a5568',
 }
 
 export const MyEventsPage = () => {
@@ -90,13 +94,15 @@ export const MyEventsPage = () => {
                         {event.status === 'DRAFT' ? 'Publicar' : 'Cancelar'}
                       </button>
                     )}
-                    <button
-                      className="ef-btn-danger"
-                      style={styles.actionBtn}
-                      onClick={() => setConfirmDeleteId(event.id)}
-                    >
-                      Eliminar
-                    </button>
+                    {event.status === 'DRAFT' && (
+                      <button
+                        className="ef-btn-danger"
+                        style={styles.actionBtn}
+                        onClick={() => setConfirmDeleteId(event.id)}
+                      >
+                        Eliminar
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

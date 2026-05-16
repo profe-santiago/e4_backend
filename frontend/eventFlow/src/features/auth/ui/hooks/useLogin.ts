@@ -18,7 +18,7 @@ export const useLogin = () => {
     try {
       const useCase = new LoginUseCase(authRepository)
       const result = await useCase.execute(email, password)
-      setAuth({ userId: result.userId, email: result.email, role: result.role }, result.token)
+      setAuth({ userId: result.userId, email: result.email, role: result.role }, result.token, result.refreshToken)
       navigate('/')
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {

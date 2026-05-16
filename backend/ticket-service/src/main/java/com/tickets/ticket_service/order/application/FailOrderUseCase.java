@@ -4,7 +4,10 @@ import com.tickets.ticket_service.exception.OrderNotFoundException;
 import com.tickets.ticket_service.order.domain.Order;
 import com.tickets.ticket_service.order.domain.OrderEventPublisher;
 import com.tickets.ticket_service.order.domain.OrderRepository;
+import com.tickets.ticket_service.order.domain.OrderStatus;
 import com.tickets.ticket_service.shared.UseCase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +19,8 @@ import java.util.UUID;
  */
 @UseCase
 public class FailOrderUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(FailOrderUseCase.class);
 
     private final OrderRepository orderRepository;
     private final OrderEventPublisher eventPublisher;
@@ -29,6 +34,11 @@ public class FailOrderUseCase {
     public void execute(UUID orderId, String reason) {
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        if (order.getStatus() == OrderStatus.FAILED || order.getStatus() == OrderStatus.CANCELLED) {
+            log.warn("[UC] FailOrder — orden ya en estado terminal {}, ignorando (idempotencia): orderId={}", order.getStatus(), orderId);
+            return;
+        }
 
         order.fail();
         Order saved = orderRepository.save(order);

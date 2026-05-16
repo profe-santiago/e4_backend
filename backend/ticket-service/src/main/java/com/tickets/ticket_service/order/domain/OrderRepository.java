@@ -24,5 +24,7 @@ public interface OrderRepository {
 
     List<Order> findExpiredPendingOrders(LocalDateTime expirationThreshold);
 
+    boolean existsByPaymentIntentId(String paymentIntentId);
+
     Order save(Order order);
 }
