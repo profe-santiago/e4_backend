@@ -1,5 +1,7 @@
 # EventFlow — Plataforma de Venta de Tickets
 
+[![CI](https://github.com/MagaliCarranza/e4_backend/actions/workflows/ci.yml/badge.svg)](https://github.com/MagaliCarranza/e4_backend/actions/workflows/ci.yml)
+
 Sistema completo de venta de entradas para eventos, construido con microservicios en **Java 21 + Spring Boot** en el backend y **React + TypeScript** en el frontend.
 
 ---
