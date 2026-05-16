@@ -264,14 +264,40 @@ service-name/
 
 ### Ejecutar Tests
 
-```bash
-# Tests de un servicio específico
-cd event-service
-./gradlew test
+#### Tests unitarios (Java — por servicio)
 
-# Tests de integración (requiere Testcontainers)
-./gradlew integrationTest
+```bash
+# Ejecutar tests y generar reporte de cobertura
+cd backend/auth-service && ./gradlew test
+cd backend/event-service && ./gradlew test
+cd backend/ticket-service && ./gradlew test
+cd backend/user-service && ./gradlew test
+cd backend/payment-service && ./gradlew test
+cd backend/notification-service && ./gradlew test
 ```
+
+El reporte HTML de cobertura se genera en:
+`<servicio>/build/reports/jacoco/test/html/index.html`
+
+#### Tests de integración E2E (Python — requiere Docker)
+
+```bash
+# 1. Levantar todos los servicios
+cd backend
+docker compose up -d
+
+# 2. Instalar dependencias de Python
+pip install -r tests/requirements.txt
+
+# 3. Ejecutar los tests E2E
+python -m pytest tests/test_microservices.py -v
+```
+
+### Reporte de cobertura
+
+Los tests unitarios del `event-service` cubren la capa de dominio y aplicación (lógica de negocio) con mocks, alcanzando hasta un 94% de cobertura en los casos de uso principales. El reporte es generado automáticamente por JaCoCo al correr `./gradlew test`.
+
+![Reporte de cobertura - event-service](docs/cobertura-event-service.png)
 
 ## Base de Datos
 
