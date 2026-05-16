@@ -7,8 +7,8 @@ services:
     container_name: rabbitmq
     hostname: rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
       RABBITMQ_ERLANG_COOKIE: "e4_backend_cookie"
       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit vm_memory_high_watermark 0.6"
     volumes:
@@ -47,14 +47,12 @@ services:
     container_name: auth_db
     environment:
       POSTGRES_DB: auth_db
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuser
-    ports:
-      - "5442:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - auth-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d auth_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d auth_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -66,14 +64,12 @@ services:
     container_name: user_db
     environment:
       POSTGRES_DB: user_db
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuser
-    ports:
-      - "5443:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - user-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d user_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d user_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -85,14 +81,12 @@ services:
     container_name: event_db
     environment:
       POSTGRES_DB: event_db
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuser
-    ports:
-      - "5444:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - event-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d event_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d event_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -104,14 +98,12 @@ services:
     container_name: ticket_db
     environment:
       POSTGRES_DB: ticket_db
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuser
-    ports:
-      - "5447:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - ticket-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d ticket_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ticket_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -123,14 +115,12 @@ services:
     container_name: payment_db
     environment:
       POSTGRES_DB: payment_db
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuser
-    ports:
-      - "5445:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - payment-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d payment_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d payment_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -142,14 +132,12 @@ services:
     container_name: notification_db
     environment:
       POSTGRES_DB: notification_db
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuser
-    ports:
-      - "5446:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - notification-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d notification_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d notification_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -210,15 +198,15 @@ services:
     environment:
       SERVER_PORT: 8090
       DB_HOST: auth-db
-      DB_PORT: 5432 # Quitar puertos de BD  en producción
+      DB_PORT: 5432
       DB_NAME: auth_db
-      DB_USER: testuser
-      DB_PASSWORD: testuser
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       APP_NAME: "Auth Service"
       APP_DESCRIPTION: "Autenticación y emisión de JWT"
       APP_VERSION: "1.0.0"
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
     depends_on:
       auth-db:
         condition: service_healthy
@@ -236,8 +224,8 @@ services:
       DB_HOST: user-db
       DB_PORT: 5432
       DB_NAME: user_db
-      DB_USER: testuser
-      DB_PASSWORD: testuser
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       APP_NAME: "User Service"
       APP_DESCRIPTION: "Gestión de perfiles de usuario"
       APP_VERSION: "1.0.0"
@@ -259,16 +247,16 @@ services:
       DB_HOST: event-db
       DB_PORT: 5432
       DB_NAME: event_db
-      DB_USER: testuser
-      DB_PASSWORD: testuser
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       APP_NAME: "Event Service"
       APP_DESCRIPTION: "Catálogo de eventos y tipos de ticket"
       APP_VERSION: "1.0.0"
       JWT_SECRET: ${JWT_SECRET}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
@@ -291,16 +279,16 @@ services:
       DB_HOST: ticket-db
       DB_PORT: 5432
       DB_NAME: ticket_db
-      DB_USER: testuser
-      DB_PASSWORD: testuser
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       APP_NAME: "Ticket Service"
       APP_DESCRIPTION: "Gestión de órdenes y tickets"
       APP_VERSION: "1.0.0"
       JWT_SECRET: ${JWT_SECRET}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
     depends_on:
       ticket-db:
         condition: service_healthy
@@ -320,15 +308,15 @@ services:
       DB_HOST: payment-db
       DB_PORT: 5432
       DB_NAME: payment_db
-      DB_USER: testuser
-      DB_PASSWORD: testuser
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       APP_NAME: "Payment Service"
       APP_DESCRIPTION: "Procesamiento de pagos con Stripe"
       APP_VERSION: "1.0.0"
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
     depends_on:
       payment-db:
@@ -349,15 +337,15 @@ services:
       DB_HOST: notification-db
       DB_PORT: 5432
       DB_NAME: notification_db
-      DB_USER: testuser
-      DB_PASSWORD: testuser
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       APP_NAME: "Notification Service"
       APP_DESCRIPTION: "Notificaciones por email a usuarios"
       APP_VERSION: "1.0.0"
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
       MAIL_HOST: ${MAIL_HOST}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}

@@ -1,5 +1,6 @@
 package com.tickets.payment_service.config;
 
+import com.stripe.Stripe;
 import com.stripe.StripeClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +18,8 @@ public class StripeConfig {
 
     @Bean
     public StripeClient stripeClient(@Value("${stripe.secret-key}") String secretKey) {
+        Stripe.setConnectTimeout(3_000);
+        Stripe.setReadTimeout(10_000);
         return new StripeClient(secretKey);
     }
 }

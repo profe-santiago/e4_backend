@@ -19,6 +19,11 @@ public class JpaCredentialRepository implements CredentialRepository {
     }
 
     @Override
+    public Optional<Credential> findById(Long id) {
+        return springData.findById(id).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Credential> findByEmail(String email) {
         return springData.findByEmail(email).map(mapper::toDomain);
     }

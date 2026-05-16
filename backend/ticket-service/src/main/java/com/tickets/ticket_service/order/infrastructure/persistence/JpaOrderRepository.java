@@ -56,6 +56,11 @@ public class JpaOrderRepository implements OrderRepository {
     }
 
     @Override
+    public boolean existsByPaymentIntentId(String paymentIntentId) {
+        return springData.existsByPaymentIntentId(paymentIntentId);
+    }
+
+    @Override
     public Order save(Order order) {
         return mapper.toDomain(springData.save(mapper.toJpaEntity(order)));
     }

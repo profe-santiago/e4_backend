@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
+import { useLogout } from '@/features/auth/ui/hooks/useLogout'
 import { NAV_ITEMS } from '@/shared/config/navigation'
 import { SidebarNavItem } from './SidebarNavItem'
 import { t } from '@/shared/config/theme'
@@ -13,11 +12,9 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const isAdmin = useAuthStore((s) => s.isAdmin)
-  const logout = useAuthStore((s) => s.logout)
+  const { handleLogout } = useLogout()
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
@@ -26,12 +23,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-
-  const handleLogout = () => {
-    queryClient.clear()
-    logout()
-    navigate('/')
-  }
 
   const handleNavClick = () => {
     if (isMobile) onClose()

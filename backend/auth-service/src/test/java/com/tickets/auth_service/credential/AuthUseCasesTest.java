@@ -8,6 +8,7 @@ import com.tickets.auth_service.credential.application.dto.RegisterCommand;
 import com.tickets.auth_service.credential.domain.Credential;
 import com.tickets.auth_service.credential.domain.CredentialRepository;
 import com.tickets.auth_service.credential.domain.PasswordHasher;
+import com.tickets.auth_service.credential.domain.RefreshTokenRepository;
 import com.tickets.auth_service.credential.domain.TokenService;
 import com.tickets.auth_service.exception.EmailAlreadyRegisteredException;
 import com.tickets.auth_service.exception.InvalidCredentialsException;
@@ -36,6 +37,7 @@ class AuthUseCasesTest {
     @Mock private CredentialRepository credentialRepository;
     @Mock private PasswordHasher passwordHasher;
     @Mock private TokenService tokenService;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
 
     private Credential savedCredential;
 
@@ -54,7 +56,7 @@ class AuthUseCasesTest {
 
         @BeforeEach
         void init() {
-            useCase = new RegisterUseCase(credentialRepository, passwordHasher, tokenService);
+            useCase = new RegisterUseCase(credentialRepository, passwordHasher, tokenService, refreshTokenRepository);
         }
 
         @Test
@@ -97,7 +99,7 @@ class AuthUseCasesTest {
 
         @BeforeEach
         void init() {
-            useCase = new LoginUseCase(credentialRepository, passwordHasher, tokenService);
+            useCase = new LoginUseCase(credentialRepository, passwordHasher, tokenService, refreshTokenRepository);
         }
 
         @Test

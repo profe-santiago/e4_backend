@@ -7,6 +7,7 @@ import com.stripe.model.Refund;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
+import com.tickets.payment_service.exception.PaymentGatewayException;
 import com.tickets.payment_service.payment.domain.CreateIntentResult;
 import com.tickets.payment_service.payment.domain.Money;
 import com.tickets.payment_service.payment.domain.OrderId;
@@ -43,7 +44,7 @@ class StripePaymentGateway implements PaymentGateway {
 
         } catch (StripeException e) {
             log.error("[STRIPE] Failed to create PaymentIntent: {}", e.getMessage());
-            throw new RuntimeException("No se pudo crear el intento de pago: " + e.getMessage(), e);
+            throw new PaymentGatewayException("No se pudo crear el intento de pago", e);
         }
     }
 

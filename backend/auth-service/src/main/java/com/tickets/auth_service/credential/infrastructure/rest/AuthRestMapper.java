@@ -22,6 +22,7 @@ public class AuthRestMapper {
     public AuthResponse toResponse(AuthResult result) {
         return AuthResponse.builder()
                 .token(result.token())
+                .refreshToken(result.refreshToken())
                 .role(result.role())
                 .email(result.email())
                 .build();

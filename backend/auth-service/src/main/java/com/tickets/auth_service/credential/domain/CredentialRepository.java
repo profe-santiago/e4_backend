@@ -8,6 +8,8 @@ import java.util.Optional;
  */
 public interface CredentialRepository {
 
+    Optional<Credential> findById(Long id);
+
     Optional<Credential> findByEmail(String email);
 
     boolean existsByEmail(String email);

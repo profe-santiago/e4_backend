@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,19 +57,19 @@ class ProcessPaymentUseCaseTest {
         );
     }
 
-    @BeforeEach
-    void stubSave() {
-        given(paymentRepository.save(any(Payment.class))).willAnswer(inv -> inv.getArgument(0));
-    }
-
     @Nested
     @DisplayName("execute — orden nueva")
     class NuevaOrden {
 
+        @BeforeEach
+        void stubSave() {
+            given(paymentRepository.save(any(Payment.class))).willAnswer(inv -> inv.getArgument(0));
+        }
+
         @Test
         @DisplayName("Stripe exitoso → pago APPROVED + publica PaymentCompletedEvent")
         void whenStripeSucceeds_shouldApproveAndPublishCompleted() {
-            given(paymentRepository.existsByOrderId(OrderId.of(ORDER_ID))).willReturn(false);
+            given(paymentRepository.findByOrderId(any())).willReturn(Optional.empty());
             given(paymentGateway.charge(any(), any(), any()))
                     .willReturn(PaymentChargeResult.success("pi_test_123"));
 
@@ -88,7 +89,7 @@ class ProcessPaymentUseCaseTest {
         @Test
         @DisplayName("Gateway rechaza → pago REJECTED + publica PaymentFailedEvent")
         void whenGatewayFails_shouldRejectAndPublishFailed() {
-            given(paymentRepository.existsByOrderId(OrderId.of(ORDER_ID))).willReturn(false);
+            given(paymentRepository.findByOrderId(any())).willReturn(Optional.empty());
             given(paymentGateway.charge(any(), any(), any()))
                     .willReturn(PaymentChargeResult.failure("Tu tarjeta fue rechazada."));
 
@@ -107,7 +108,7 @@ class ProcessPaymentUseCaseTest {
         @Test
         @DisplayName("Estado inesperado de gateway → REJECTED + publica PaymentFailedEvent")
         void whenGatewayReturnsUnexpectedStatus_shouldRejectAndPublishFailed() {
-            given(paymentRepository.existsByOrderId(OrderId.of(ORDER_ID))).willReturn(false);
+            given(paymentRepository.findByOrderId(any())).willReturn(Optional.empty());
             given(paymentGateway.charge(any(), any(), any()))
                     .willReturn(PaymentChargeResult.failure("Unexpected payment status: requires_action"));
 
@@ -125,15 +126,17 @@ class ProcessPaymentUseCaseTest {
     class Idempotencia {
 
         @Test
-        @DisplayName("orden duplicada → no llama al gateway ni publica eventos")
-        void whenDuplicateOrderId_shouldBeIdempotentAndSkipGateway() {
-            given(paymentRepository.existsByOrderId(OrderId.of(ORDER_ID))).willReturn(true);
+        @DisplayName("orden duplicada APPROVED → republica PaymentCompletedEvent sin llamar al gateway")
+        void whenDuplicateApprovedOrder_shouldRepublishCompletedAndSkipGateway() {
+            Payment approvedPayment = pendingPaymentStub();
+            approvedPayment.confirm("pi_existing_123");
+            given(paymentRepository.findByOrderId(any())).willReturn(Optional.of(approvedPayment));
 
             useCase.execute(buildCommand());
 
             then(paymentGateway).shouldHaveNoInteractions();
             then(paymentRepository).should(never()).save(any());
-            then(paymentEventPort).shouldHaveNoInteractions();
+            then(paymentEventPort).should().publishPaymentCompleted(approvedPayment);
         }
     }
 }

@@ -37,6 +37,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/categories").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/**").hasRole("ADMIN")
+                        // Solo ADMIN puede crear/modificar/eliminar eventos
+                        .requestMatchers(HttpMethod.POST, "/api/v1/events").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/events/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/events/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/events/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/events/my").hasRole("ADMIN")
+                        // Solo ADMIN puede gestionar tipos de ticket
+                        .requestMatchers(HttpMethod.POST, "/api/v1/events/*/ticket-types").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/events/*/ticket-types/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/events/*/ticket-types/**").hasRole("ADMIN")
+                        // Subir imágenes requiere autenticación
+                        .requestMatchers(HttpMethod.POST, "/api/v1/upload/**").authenticated()
                         // El resto requiere autenticación
                         .anyRequest().authenticated()
                 )

@@ -5,6 +5,7 @@ import com.tickets.payment_service.payment.domain.Money;
 import com.tickets.payment_service.payment.domain.OrderId;
 import com.tickets.payment_service.payment.domain.Payment;
 import com.tickets.payment_service.payment.domain.PaymentChargeResult;
+import com.tickets.payment_service.payment.domain.PaymentStatus;
 import com.tickets.payment_service.payment.domain.UserId;
 import com.tickets.payment_service.payment.domain.port.PaymentEventPort;
 import com.tickets.payment_service.payment.domain.port.PaymentGateway;
@@ -44,9 +45,20 @@ public class ProcessPaymentUseCase {
     public void execute(ProcessPaymentCommand command) {
         OrderId orderId = OrderId.of(command.orderId());
 
-        // Idempotencia: si ya procesamos este pedido, ignoramos silenciosamente
-        if (paymentRepository.existsByOrderId(orderId)) {
-            log.warn("[UC] ProcessPayment — orden duplicada, ignorando: orderId={}", command.orderId());
+        // Idempotencia: si ya existe un pago para esta orden, republicar el evento
+        // en caso de que el mensaje anterior haya fallado después de guardar en DB
+        var existing = paymentRepository.findByOrderId(orderId);
+        if (existing.isPresent()) {
+            Payment existingPayment = existing.get();
+            if (existingPayment.getStatus() == PaymentStatus.APPROVED) {
+                log.warn("[UC] ProcessPayment — pago ya APPROVED, republicando evento: orderId={}", command.orderId());
+                paymentEventPort.publishPaymentCompleted(existingPayment);
+            } else if (existingPayment.getStatus() == PaymentStatus.REJECTED) {
+                log.warn("[UC] ProcessPayment — pago ya REJECTED, republicando evento: orderId={}", command.orderId());
+                paymentEventPort.publishPaymentFailed(orderId, UserId.of(command.userId()), "Pago previamente rechazado");
+            } else {
+                log.warn("[UC] ProcessPayment — pago en estado {}, ignorando: orderId={}", existingPayment.getStatus(), command.orderId());
+            }
             return;
         }
 
