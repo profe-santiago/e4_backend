@@ -21,7 +21,7 @@ public interface EventRepository {
      * Listado paginado de eventos publicados, con filtro opcional por categoría.
      * Devuelve PageResult<Event> — abstracción de dominio, no Spring Page.
      */
-    PageResult<Event> findPublished(EventStatus status, Long categoryId, int page, int size);
+    PageResult<Event> findPublished(EventStatus status, Long categoryId, String search, String city, String venue, int page, int size);
 
     List<Event> findAllByOrganizerId(UUID organizerId);
 

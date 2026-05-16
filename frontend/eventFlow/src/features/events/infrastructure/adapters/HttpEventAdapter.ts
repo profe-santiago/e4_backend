@@ -13,6 +13,9 @@ export class HttpEventAdapter implements EventRepository {
         page: filters.page ?? 0,
         size: filters.size ?? 12,
         ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+        ...(filters.search    ? { search: filters.search }           : {}),
+        ...(filters.city      ? { city: filters.city }               : {}),
+        ...(filters.venue     ? { venue: filters.venue }             : {}),
       },
     })
     return data
@@ -31,6 +34,15 @@ export class HttpEventAdapter implements EventRepository {
   async getMyEvents(): Promise<Event[]> {
     const { data } = await this.client.get<Event[]>('/api/v1/events/my')
     return data
+  }
+
+  async uploadImage(file: File): Promise<string> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await this.client.post<{ imageUrl: string }>('/api/v1/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data.imageUrl
   }
 
   async createEvent(request: CreateEventRequest): Promise<Event> {

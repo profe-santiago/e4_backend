@@ -20,7 +20,7 @@ public class OrderRestMapper {
                 .map(i -> new CreateOrderCommand.OrderItemData(
                         i.getEventId(), i.getTicketTypeId(), i.getQuantity()))
                 .toList();
-        return new CreateOrderCommand(userId, request.getPaymentMethodId(), items);
+        return new CreateOrderCommand(userId, request.getPaymentIntentId(), items);
     }
 
     public OrderResponse toResponse(Order order) {
@@ -29,7 +29,7 @@ public class OrderRestMapper {
                 .userId(order.getUserId())
                 .status(order.getStatus())
                 .totalAmount(order.getTotalAmount())
-                .paymentMethodId(order.getPaymentMethodId())
+                .paymentIntentId(order.getPaymentIntentId())
                 .items(order.getItems().stream().map(this::toItemResponse).toList())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())

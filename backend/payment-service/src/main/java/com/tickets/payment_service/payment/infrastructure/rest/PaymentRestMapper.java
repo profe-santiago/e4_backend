@@ -15,7 +15,7 @@ public class PaymentRestMapper {
                 .amount(payment.getAmount().amount())
                 .currency(payment.getAmount().currency())
                 .status(payment.getStatus())
-                .paymentMethodId(payment.getPaymentMethodId())
+                .paymentIntentId(payment.getPaymentIntentId())
                 .transactionId(payment.getTransactionId())
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())

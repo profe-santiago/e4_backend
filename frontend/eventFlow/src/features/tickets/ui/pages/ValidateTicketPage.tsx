@@ -1,48 +1,95 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useValidateTicket } from '../hooks/useValidateTicket'
+import { useTicketTypesByEvent } from '@/features/events/ui/hooks/useTicketTypesByEvent'
+import { QrScanner } from '../components/QrScanner'
 import type { Ticket } from '../../domain/entities/Ticket'
+import { t } from '@/shared/config/theme'
+import { formatDateTime as formatDate } from '@/shared/utils/formatDate'
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div style={styles.infoRow}>
+    <span style={styles.label}>{label}</span>
+    <span style={styles.value}>{value}</span>
+  </div>
+)
+
+const ValidatedResult = ({ ticket }: { ticket: Ticket }) => {
+  const { data: ticketTypes = [] } = useTicketTypesByEvent(ticket.eventId)
+  const typeName = ticketTypes.find(tt => tt.id === ticket.ticketTypeId)?.name ?? `#${ticket.ticketTypeId}`
+
+  return (
+    <div style={styles.successBanner}>
+      <p style={styles.successTitle}>✓ Ticket válido — acceso permitido</p>
+      <div style={styles.ticketInfo}>
+        <InfoRow label="Ticket ID"     value={<span style={styles.mono}>{ticket.id.toUpperCase()}</span>} />
+        <InfoRow label="Orden"         value={<span style={styles.mono}>#{ticket.orderId.slice(0, 8).toUpperCase()}</span>} />
+        <InfoRow label="Tipo de ticket" value={typeName} />
+        <InfoRow label="Comprado el"   value={formatDate(ticket.purchasedAt)} />
+        <InfoRow label="Estado"        value={<span style={{ color: '#718096' }}>USED</span>} />
+      </div>
+    </div>
+  )
+}
 
 export const ValidateTicketPage = () => {
   const [qrCode, setQrCode] = useState('')
+  const [scanning, setScanning] = useState(false)
   const [lastValidated, setLastValidated] = useState<Ticket | null>(null)
-
   const { mutate: validate, isPending, isError, reset } = useValidateTicket()
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!qrCode.trim()) return
+  const runValidation = useCallback((code: string) => {
     reset()
     setLastValidated(null)
-    validate(qrCode.trim(), {
+    validate(code.trim(), {
       onSuccess: (ticket) => {
         setLastValidated(ticket)
         setQrCode('')
       },
     })
+  }, [validate, reset])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!qrCode.trim()) return
+    runValidation(qrCode)
   }
+
+  const handleScan = useCallback((value: string) => {
+    setScanning(false)
+    runValidation(value)
+  }, [runValidation])
 
   return (
     <div style={styles.container}>
       <h1 style={styles.heading}>Validar ticket</h1>
-      <p style={styles.subtitle}>Ingresá el código QR del ticket para validarlo en la entrada.</p>
+      <p style={styles.subtitle}>Escaneá el QR del ticket o pegá el código manualmente.</p>
+
+      <button
+        onClick={() => setScanning(true)}
+        className="ef-btn ef-btn-full"
+        style={styles.scanBtn}
+        type="button"
+      >
+        📷 Escanear con cámara
+      </button>
+
+      <div style={styles.divider}>
+        <span style={styles.dividerText}>o ingresá el código manualmente</span>
+      </div>
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.field}>
-          <label htmlFor="qrCode">Código QR</label>
+          <label className="ef-label">Código QR</label>
           <input
-            id="qrCode"
             type="text"
             placeholder="Pegá el valor del QR acá"
             value={qrCode}
             onChange={(e) => setQrCode(e.target.value)}
-            style={styles.input}
-            autoFocus
+            className="ef-input"
+            style={{ fontFamily: 'monospace' }}
           />
         </div>
-        <button type="submit" disabled={isPending || !qrCode.trim()} style={styles.btn}>
+        <button type="submit" disabled={isPending || !qrCode.trim()} className="ef-btn ef-btn-full">
           {isPending ? 'Validando...' : 'Validar ticket'}
         </button>
       </form>
@@ -53,46 +100,28 @@ export const ValidateTicketPage = () => {
         </div>
       )}
 
-      {lastValidated && (
-        <div style={styles.successBanner}>
-          <p style={styles.successTitle}>✓ Ticket válido — acceso permitido</p>
-          <div style={styles.ticketInfo}>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Ticket ID</span>
-              <span style={styles.mono}>{lastValidated.id.slice(0, 8).toUpperCase()}</span>
-            </div>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Ticket type</span>
-              <span>#{lastValidated.ticketTypeId}</span>
-            </div>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Comprado el</span>
-              <span>{formatDate(lastValidated.purchasedAt)}</span>
-            </div>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Estado</span>
-              <span style={{ color: '#718096' }}>USED</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {lastValidated && <ValidatedResult ticket={lastValidated} />}
+
+      {scanning && <QrScanner onScan={handleScan} onClose={() => setScanning(false)} />}
     </div>
   )
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { maxWidth: '560px', margin: '0 auto', padding: '2rem 1rem' },
-  heading: { fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' },
-  subtitle: { color: '#555', marginBottom: '1.5rem' },
-  form: { display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' },
-  field: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-  input: { padding: '0.6rem', fontSize: '1rem', borderRadius: '4px', border: '1px solid #cbd5e0', fontFamily: 'monospace' },
-  btn: { padding: '0.75rem', fontSize: '1rem', background: '#3182ce', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 },
-  errorBanner: { background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '8px', padding: '1rem', color: '#c53030', textAlign: 'center' },
-  successBanner: { background: '#f0fff4', border: '1px solid #9ae6b4', borderRadius: '8px', padding: '1.25rem' },
-  successTitle: { fontWeight: 700, color: '#276749', margin: '0 0 1rem', fontSize: '1.05rem' },
-  ticketInfo: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  infoRow: { display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' },
-  label: { color: '#555', fontWeight: 500 },
-  mono: { fontFamily: 'monospace' },
+  container:    { maxWidth: '520px', margin: '0 auto' },
+  heading:      { fontSize: '1.75rem', fontWeight: 700, color: t.text, marginBottom: '0.5rem' },
+  subtitle:     { color: t.textMuted, marginBottom: '1.5rem', fontSize: '0.9rem' },
+  scanBtn:      { marginBottom: '1.25rem' },
+  divider:      { display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' },
+  dividerText:  { color: t.textDim, fontSize: '0.8rem', flex: 1, textAlign: 'center' as const },
+  form:         { display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' },
+  field:        { display: 'flex', flexDirection: 'column', gap: '0.35rem' },
+  errorBanner:  { background: 'rgba(248,113,113,0.08)', border: `1px solid rgba(248,113,113,0.3)`, borderRadius: '8px', padding: '1rem', color: t.error, textAlign: 'center', fontWeight: 500 },
+  successBanner:{ background: 'rgba(52,211,153,0.08)', border: `1px solid rgba(52,211,153,0.3)`, borderRadius: '8px', padding: '1.25rem' },
+  successTitle: { fontWeight: 700, color: t.success, margin: '0 0 1rem', fontSize: '1.05rem' },
+  ticketInfo:   { display: 'flex', flexDirection: 'column' },
+  infoRow:      { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', padding: '0.5rem 0', borderBottom: `1px solid ${t.border}` },
+  label:        { color: t.textMuted, fontWeight: 500 },
+  value:        { color: t.text },
+  mono:         { fontFamily: 'monospace', fontSize: '0.85rem' },
 }

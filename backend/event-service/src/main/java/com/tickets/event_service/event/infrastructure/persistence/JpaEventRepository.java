@@ -44,12 +44,15 @@ public class JpaEventRepository implements EventRepository {
     }
 
     @Override
-    public PageResult<Event> findPublished(EventStatus status, Long categoryId, int page, int size) {
+    public PageResult<Event> findPublished(EventStatus status, Long categoryId, String search, String city, String venue, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("startDate").ascending());
 
-        Page<EventJpaEntity> result = categoryId != null
-                ? springData.findAllByStatusAndCategoryIdWithCategory(status, categoryId, pageable)
-                : springData.findAllByStatusWithCategory(status, pageable);
+        String normalizedSearch = (search != null && !search.isBlank()) ? search.trim() : "";
+        String normalizedCity   = (city   != null && !city.isBlank())   ? city.trim()   : "";
+        String normalizedVenue  = (venue  != null && !venue.isBlank())  ? venue.trim()  : "";
+
+        Page<EventJpaEntity> result = springData.findAllByFilters(
+                status, categoryId, normalizedSearch, normalizedCity, normalizedVenue, pageable);
 
         List<Event> items = result.getContent().stream()
                 .map(mapper::toDomain)

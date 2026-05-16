@@ -37,7 +37,8 @@ public class UpdateTicketTypeUseCase {
 
         // La lógica de actualización vive en el dominio
         ticketType.updateDetails(command.name(), command.description(),
-                command.price(), command.totalQuantity());
+                command.price(), command.totalQuantity(),
+                command.saleStartDate(), command.saleEndDate());
 
         return ticketTypeRepository.save(ticketType);
     }

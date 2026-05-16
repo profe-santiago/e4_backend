@@ -60,11 +60,14 @@ public class EventController {
     @Operation(summary = "Listar eventos publicados (paginado, público)")
     public PaginatedResponse<EventResponse> findPublished(
             @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String venue,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         return PaginatedResponse.from(
-                listPublishedEvents.execute(categoryId, page, size)
+                listPublishedEvents.execute(categoryId, search, city, venue, page, size)
                         .map(mapper::toResponse)
         );
     }

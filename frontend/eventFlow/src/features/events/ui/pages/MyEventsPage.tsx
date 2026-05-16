@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom'
 import { useMyEvents } from '../hooks/useMyEvents'
 import { useEventActions } from '../hooks/useEventActions'
 import type { Event, EventStatus } from '../../domain/entities/Event'
+import { t } from '@/shared/config/theme'
+import { formatDateShort } from '@/shared/utils/formatDate'
 
 const statusLabel: Record<EventStatus, string> = {
-  DRAFT: 'Borrador',
+  DRAFT:     'Borrador',
   PUBLISHED: 'Publicado',
   CANCELLED: 'Cancelado',
 }
 
-const statusColor: Record<EventStatus, React.CSSProperties> = {
-  DRAFT: { background: '#edf2f7', color: '#4a5568' },
-  PUBLISHED: { background: '#c6f6d5', color: '#276749' },
-  CANCELLED: { background: '#fed7d7', color: '#c53030' },
+const statusColor: Record<EventStatus, string> = {
+  DRAFT:     '#d69e2e',
+  PUBLISHED: '#38a169',
+  CANCELLED: '#718096',
 }
 
 export const MyEventsPage = () => {
@@ -23,26 +25,16 @@ export const MyEventsPage = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const handleChangeStatus = (event: Event) => {
-    if (event.status === 'DRAFT') {
-      changeStatus.mutate({ id: event.id, status: 'PUBLISHED' })
-    } else if (event.status === 'PUBLISHED') {
-      changeStatus.mutate({ id: event.id, status: 'CANCELLED' })
-    }
+    if (event.status === 'DRAFT') changeStatus.mutate({ id: event.id, status: 'PUBLISHED' })
+    else if (event.status === 'PUBLISHED') changeStatus.mutate({ id: event.id, status: 'CANCELLED' })
   }
 
   const handleConfirmDelete = () => {
     if (!confirmDeleteId) return
-    deleteEvent.mutate(confirmDeleteId, {
-      onSuccess: () => setConfirmDeleteId(null),
-    })
+    deleteEvent.mutate(confirmDeleteId, { onSuccess: () => setConfirmDeleteId(null) })
   }
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
+  const formatDate = formatDateShort
 
   if (isLoading) return <div style={styles.feedback}>Cargando eventos...</div>
   if (isError) return <div style={styles.error}>Error al cargar los eventos.</div>
@@ -51,7 +43,7 @@ export const MyEventsPage = () => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.heading}>Mis eventos</h1>
-        <button style={styles.createBtn} onClick={() => navigate('/events/new')}>
+        <button className="ef-btn" onClick={() => navigate('/events/new')}>
           + Crear evento
         </button>
       </div>
@@ -75,25 +67,23 @@ export const MyEventsPage = () => {
                 <tr key={event.id} style={styles.tr}>
                   <td style={styles.td}>{event.title}</td>
                   <td style={styles.td}>
-                    <span style={{ ...styles.badge, ...statusColor[event.status] }}>
+                    <span style={{ ...styles.badge, background: statusColor[event.status] }}>
                       {statusLabel[event.status]}
                     </span>
                   </td>
                   <td style={styles.td}>{formatDate(event.startDate)}</td>
                   <td style={styles.td}>{event.city}</td>
-                  <td style={styles.tdActions}>
-                    <button
-                      style={styles.actionBtn}
-                      onClick={() => navigate(`/events/${event.id}/edit`)}
-                    >
+                  <td style={{ ...styles.td, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button className="ef-btn-ghost" style={styles.actionBtn} onClick={() => navigate(`/events/${event.id}/overview`)}>
+                      Ver
+                    </button>
+                    <button className="ef-btn-ghost" style={styles.actionBtn} onClick={() => navigate(`/events/${event.id}/edit`)}>
                       Editar
                     </button>
                     {event.status !== 'CANCELLED' && (
                       <button
-                        style={{
-                          ...styles.actionBtn,
-                          ...(event.status === 'DRAFT' ? styles.publishBtn : styles.cancelBtn),
-                        }}
+                        className="ef-btn-ghost"
+                        style={styles.actionBtn}
                         disabled={changeStatus.isPending}
                         onClick={() => handleChangeStatus(event)}
                       >
@@ -101,7 +91,8 @@ export const MyEventsPage = () => {
                       </button>
                     )}
                     <button
-                      style={{ ...styles.actionBtn, ...styles.deleteBtn }}
+                      className="ef-btn-danger"
+                      style={styles.actionBtn}
                       onClick={() => setConfirmDeleteId(event.id)}
                     >
                       Eliminar
@@ -122,17 +113,10 @@ export const MyEventsPage = () => {
               <strong>no se puede deshacer</strong>.
             </p>
             <div style={styles.modalActions}>
-              <button
-                style={styles.cancelModalBtn}
-                onClick={() => setConfirmDeleteId(null)}
-              >
+              <button className="ef-btn-ghost" onClick={() => setConfirmDeleteId(null)}>
                 Cancelar
               </button>
-              <button
-                style={styles.confirmDeleteBtn}
-                disabled={deleteEvent.isPending}
-                onClick={handleConfirmDelete}
-              >
+              <button className="ef-btn-danger" disabled={deleteEvent.isPending} onClick={handleConfirmDelete}>
                 {deleteEvent.isPending ? 'Eliminando...' : 'Sí, eliminar'}
               </button>
             </div>
@@ -144,28 +128,21 @@ export const MyEventsPage = () => {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { maxWidth: '1100px', margin: '0 auto', padding: '2rem 1rem' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  heading: { fontSize: '1.75rem', fontWeight: 700 },
-  createBtn: { padding: '0.6rem 1.25rem', background: '#3182ce', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' },
-  tableWrapper: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' },
-  th: { padding: '0.75rem 1rem', textAlign: 'left', borderBottom: '2px solid #e2e8f0', fontWeight: 600, color: '#4a5568', whiteSpace: 'nowrap' },
-  tr: { borderBottom: '1px solid #e2e8f0' },
-  td: { padding: '0.75rem 1rem', verticalAlign: 'middle' },
-  tdActions: { padding: '0.75rem 1rem', verticalAlign: 'middle', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' },
-  badge: { display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 },
-  actionBtn: { padding: '0.35rem 0.75rem', fontSize: '0.8rem', border: '1px solid #cbd5e0', borderRadius: '4px', background: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' },
-  publishBtn: { background: '#ebf8ff', borderColor: '#bee3f8', color: '#2b6cb0' },
-  cancelBtn: { background: '#fff5f5', borderColor: '#fed7d7', color: '#c53030' },
-  deleteBtn: { background: '#fff5f5', borderColor: '#fc8181', color: '#e53e3e' },
-  empty: { textAlign: 'center', color: '#718096', marginTop: '4rem', fontSize: '1rem' },
-  feedback: { textAlign: 'center', padding: '4rem', color: '#555' },
-  error: { textAlign: 'center', padding: '4rem', color: '#e53e3e' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#fff', borderRadius: '8px', padding: '2rem', maxWidth: '420px', width: '90%' },
-  modalText: { marginBottom: '1.5rem', color: '#333', lineHeight: 1.5 },
+  container:    { maxWidth: '1100px', margin: '0 auto' },
+  header:       { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
+  heading:      { fontSize: '1.75rem', fontWeight: 700, color: t.text },
+  tableWrapper: { overflowX: 'auto', background: t.surface, border: `1px solid ${t.border}`, borderRadius: '10px' },
+  table:        { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
+  th:           { padding: '0.875rem 1rem', textAlign: 'left', borderBottom: `1px solid ${t.border}`, fontWeight: 600, color: t.textMuted, whiteSpace: 'nowrap', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  tr:           { borderBottom: `1px solid ${t.border}` },
+  td:           { padding: '0.875rem 1rem', verticalAlign: 'middle', color: t.text },
+  badge:        { display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: '#fff' },
+  actionBtn:    { padding: '0.3rem 0.7rem', fontSize: '0.78rem' },
+  empty:        { textAlign: 'center', color: t.textMuted, marginTop: '4rem', fontSize: '1rem' },
+  feedback:     { textAlign: 'center', padding: '4rem', color: t.textMuted },
+  error:        { textAlign: 'center', padding: '4rem', color: t.error },
+  overlay:      { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal:        { background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '2rem', maxWidth: '420px', width: '90%' },
+  modalText:    { marginBottom: '1.5rem', color: t.textMuted, lineHeight: 1.6 },
   modalActions: { display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' },
-  cancelModalBtn: { padding: '0.6rem 1.25rem', border: '1px solid #cbd5e0', borderRadius: '4px', background: '#fff', cursor: 'pointer' },
-  confirmDeleteBtn: { padding: '0.6rem 1.25rem', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 },
 }

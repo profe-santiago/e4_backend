@@ -7,6 +7,7 @@ import com.stripe.model.Refund;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
+import com.tickets.payment_service.payment.domain.CreateIntentResult;
 import com.tickets.payment_service.payment.domain.Money;
 import com.tickets.payment_service.payment.domain.OrderId;
 import com.tickets.payment_service.payment.domain.PaymentChargeResult;
@@ -17,16 +18,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 
-/**
- * Adaptador de salida que implementa PaymentGateway usando el SDK de Stripe.
- *
- * Usa StripeClient (inyectado como bean) en lugar de la API estática legacy.
- * Cualquier excepción de Stripe queda encapsulada en PaymentChargeResult.failure()
- * — el dominio nunca ve StripeException.
- *
- * Para reemplazar Stripe por otro proveedor basta con crear otra implementación
- * de PaymentGateway y cambiar el bean en la configuración.
- */
 @Component
 class StripePaymentGateway implements PaymentGateway {
 
@@ -39,39 +30,51 @@ class StripePaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public PaymentChargeResult charge(Money amount, String paymentMethodId, OrderId orderId) {
+    public CreateIntentResult createIntent(Money amount) {
         try {
             PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                     .setAmount(amount.toMinorUnits())
                     .setCurrency(amount.currency().toLowerCase(Locale.ROOT))
-                    .setPaymentMethod(paymentMethodId)
-                    .setConfirm(true)
-                    .setAutomaticPaymentMethods(
-                            PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                                    .setEnabled(true)
-                                    .setAllowRedirects(
-                                            PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.NEVER)
-                                    .build()
-                    )
                     .build();
 
-            // La idempotency key garantiza que reintentos del mismo pedido no cobren dos veces
-            RequestOptions options = RequestOptions.builder()
-                    .setIdempotencyKey("pay-order-" + orderId.value())
-                    .build();
-
-            PaymentIntent intent = stripeClient.paymentIntents().create(params, options);
-            log.info("[STRIPE] PaymentIntent created: id={}, status={}", intent.getId(), intent.getStatus());
-
-            if ("succeeded".equals(intent.getStatus())) {
-                return PaymentChargeResult.success(intent.getId());
-            }
-
-            log.warn("[STRIPE] Unexpected status for orderId={}: {}", orderId.value(), intent.getStatus());
-            return PaymentChargeResult.failure("Unexpected payment status: " + intent.getStatus());
+            PaymentIntent intent = stripeClient.paymentIntents().create(params);
+            log.info("[STRIPE] PaymentIntent created: id={}", intent.getId());
+            return new CreateIntentResult(intent.getClientSecret(), intent.getId());
 
         } catch (StripeException e) {
-            log.error("[STRIPE] Charge failed for orderId={}: {}", orderId.value(), e.getMessage());
+            log.error("[STRIPE] Failed to create PaymentIntent: {}", e.getMessage());
+            throw new RuntimeException("No se pudo crear el intento de pago: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public PaymentChargeResult charge(Money expectedAmount, String paymentIntentId, OrderId orderId) {
+        try {
+            RequestOptions options = RequestOptions.builder()
+                    .setIdempotencyKey("verify-order-" + orderId.value())
+                    .build();
+
+            PaymentIntent intent = stripeClient.paymentIntents().retrieve(paymentIntentId, options);
+            log.info("[STRIPE] PaymentIntent retrieved: id={}, status={}", intent.getId(), intent.getStatus());
+
+            if (!"succeeded".equals(intent.getStatus())) {
+                log.warn("[STRIPE] PaymentIntent not succeeded: id={}, status={}", intent.getId(), intent.getStatus());
+                return PaymentChargeResult.failure("Estado de pago inesperado: " + intent.getStatus());
+            }
+
+            // Validar que el monto cobrado coincida con el de la orden (anti-manipulación)
+            long expectedMinorUnits = expectedAmount.toMinorUnits();
+            if (!intent.getAmount().equals(expectedMinorUnits)) {
+                log.error("[STRIPE] Amount mismatch for orderId={}: expected={}, got={}",
+                        orderId.value(), expectedMinorUnits, intent.getAmount());
+                return PaymentChargeResult.failure(
+                        "El monto cobrado no coincide con el total de la orden");
+            }
+
+            return PaymentChargeResult.success(intent.getId());
+
+        } catch (StripeException e) {
+            log.error("[STRIPE] Verification failed for orderId={}: {}", orderId.value(), e.getMessage());
             return PaymentChargeResult.failure(e.getMessage());
         }
     }
