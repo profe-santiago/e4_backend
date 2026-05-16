@@ -396,6 +396,43 @@ service-name/
 
 ---
 
+## Testing
+
+### Tests unitarios (Java)
+
+Los 6 microservicios tienen tests unitarios con **JUnit 5 + Mockito** que prueban la lógica de negocio de forma aislada, sin base de datos ni servicios externos.
+
+```bash
+# Ejecutar tests y generar reporte de cobertura de un servicio
+cd backend/auth-service && ./gradlew test
+cd backend/event-service && ./gradlew test
+cd backend/ticket-service && ./gradlew test
+cd backend/user-service && ./gradlew test
+cd backend/payment-service && ./gradlew test
+cd backend/notification-service && ./gradlew test
+```
+
+El reporte HTML de cobertura (JaCoCo) se genera automáticamente en:
+```
+backend/<servicio>/build/reports/jacoco/test/html/index.html
+```
+
+### Tests de integración E2E (Python)
+
+7 tests de integración que prueban los endpoints HTTP reales cubriendo los flujos críticos: autenticación, eventos, órdenes, pagos y perfiles de usuario.
+
+**Requisito:** tener los contenedores corriendo (`docker compose up -d`)
+
+```bash
+# Instalar dependencias
+pip install -r backend/tests/requirements.txt
+
+# Ejecutar tests E2E
+python -m pytest backend/tests/test_microservices.py -v
+```
+
+---
+
 ## Comandos Útiles
 
 ```bash
