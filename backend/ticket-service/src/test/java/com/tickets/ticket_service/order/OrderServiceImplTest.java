@@ -59,7 +59,7 @@ class OrderServiceImplTest {
         OrderItem item = OrderItem.create(eventId, 1L, 2);
         item.setId(1L);
 
-        pendingOrder = Order.create(userId, \"pi_test\", List.of(item));
+        pendingOrder = Order.create(userId, "pi_test", List.of(item));
         pendingOrder.setId(orderId);
     }
 
@@ -81,7 +81,7 @@ class OrderServiceImplTest {
         void shouldCreatePendingOrder_andPublishCommand() {
             given(orderRepository.save(any(Order.class))).willReturn(pendingOrder);
 
-            CreateOrderCommand command = new CreateOrderCommand(userId, \"pi_test\", List.of(
+            CreateOrderCommand command = new CreateOrderCommand(userId, "pi_test", List.of(
                     new CreateOrderCommand.OrderItemData(eventId, 1L, 2)));
 
             Order result = useCase.execute(command);
