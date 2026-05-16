@@ -365,17 +365,7 @@ Cada servicio expone documentación OpenAPI:
 
 **Nota**: En producción, accede a través del gateway en el puerto 8080.
 
-## Próximas Mejoras
 
-- [ ] API Gateway + Rate Limiting ✅ **COMPLETADO**
-- [ ] Sistema de Reembolsos
-- [ ] Reservas con TTL (timeout automático)
-- [ ] Mapa interactivo de asientos
-- [ ] Validación de tickets (QR scanning)
-- [ ] Notificaciones multi-canal (SMS, Push)
-- [ ] Sistema de recomendaciones con ML
-- [ ] Observabilidad completa (Prometheus + Grafana + Zipkin)
-- [ ] Tests de carga con Gatling
 
 ## Contribuir
 
@@ -385,10 +375,4 @@ Cada servicio expone documentación OpenAPI:
 4. Push a la rama (`git push origin feat/nueva-feature`)
 5. Abre un Pull Request
 
-## Licencia
 
-Este proyecto es privado y confidencial.
-
-## Soporte
-
-Para problemas o preguntas, contactar al equipo de desarrollo.
