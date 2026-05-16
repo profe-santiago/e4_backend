@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/MagaliCarranza/e4_backend/actions/workflows/ci.yml/badge.svg)](https://github.com/MagaliCarranza/e4_backend/actions/workflows/ci.yml)
 
-Sistema completo de venta de entradas para eventos, construido con microservicios en **Java 21 + Spring Boot** en el backend y **React + TypeScript** en el frontend.
+Proyecto de venta de entradas para eventos eventFlow, construido con microservicios en **Java 21 + Spring Boot** en el backend y **React + TypeScript** en el frontend.
 
 ---
 
@@ -104,7 +104,7 @@ auth_db    user_db   event_db  ticket_db payment_db notif_db
 | Patrón | Aplicación en el proyecto |
 |--------|--------------------------|
 | **Adapter** | Toda la capa `infrastructure/` adapta tecnologías externas a contratos del dominio. Ejemplos: `JpaCredentialRepository` adapta Spring Data JPA al puerto `CredentialRepository`; `HttpAuthAdapter` adapta Axios al puerto `AuthRepository`; `UserHttpGateway` adapta `RestClient` al puerto `UserGateway` |
-| **Facade** | El `api-gateway` actúa como fachada unificada del sistema: expone un único punto de entrada (`localhost:8080`) y oculta la topología interna de los seis microservicios al cliente |
+| **Facade** | El `api-gateway` actúa como fachada unificada : expone un único punto de entrada (`localhost:8080`) y oculta la topología interna de los seis microservicios al cliente |
 
 ### Patrones GoF — De Comportamiento
 
@@ -293,7 +293,7 @@ npm run dev
 # Accesible en http://localhost:5173
 ```
 
-### 5. Verificar Salud del Sistema
+### 5. Verificar Salud 
 
 ```bash
 # API Gateway health
