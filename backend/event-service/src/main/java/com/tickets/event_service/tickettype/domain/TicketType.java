@@ -1,5 +1,6 @@
 package com.tickets.event_service.tickettype.domain;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -17,13 +18,16 @@ public class TicketType {
     private Money price;
     private int totalQuantity;
     private int availableQuantity;
+    private LocalDateTime saleStartDate;
+    private LocalDateTime saleEndDate;
 
     public TicketType() {}
 
     // ─── Factory method ───────────────────────────────────────────────────────
 
     public static TicketType create(UUID eventId, String name, String description,
-                                     Money price, int totalQuantity) {
+                                     Money price, int totalQuantity,
+                                     LocalDateTime saleStartDate, LocalDateTime saleEndDate) {
         TicketType tt = new TicketType();
         tt.eventId = eventId;
         tt.name = name;
@@ -31,6 +35,8 @@ public class TicketType {
         tt.price = price;
         tt.totalQuantity = totalQuantity;
         tt.availableQuantity = totalQuantity;
+        tt.saleStartDate = saleStartDate;
+        tt.saleEndDate = saleEndDate;
         return tt;
     }
 
@@ -41,10 +47,23 @@ public class TicketType {
      * Lanza excepción si el stock es insuficiente — el UseCase no toma esta decisión.
      */
     public void reserveStock(int quantity) {
+        validateSalePeriod();
         if (availableQuantity < quantity) {
             throw new InsufficientStockException(name, availableQuantity, quantity);
         }
         this.availableQuantity -= quantity;
+    }
+
+    private void validateSalePeriod() {
+        LocalDateTime now = LocalDateTime.now();
+        if (saleStartDate != null && now.isBefore(saleStartDate)) {
+            throw new SaleNotAvailableException(
+                    "La venta de '" + name + "' aún no ha comenzado");
+        }
+        if (saleEndDate != null && now.isAfter(saleEndDate)) {
+            throw new SaleNotAvailableException(
+                    "La venta de '" + name + "' ha cerrado");
+        }
     }
 
     /**
@@ -59,12 +78,15 @@ public class TicketType {
      * Actualiza los detalles del tipo de ticket.
      * Resetea el availableQuantity al nuevo totalQuantity.
      */
-    public void updateDetails(String name, String description, Money price, int totalQuantity) {
+    public void updateDetails(String name, String description, Money price, int totalQuantity,
+                               LocalDateTime saleStartDate, LocalDateTime saleEndDate) {
         this.name = name;
         this.description = description;
         this.price = price;
         this.totalQuantity = totalQuantity;
         this.availableQuantity = totalQuantity;
+        this.saleStartDate = saleStartDate;
+        this.saleEndDate = saleEndDate;
     }
 
     // ─── Getters ─────────────────────────────────────────────────────────────
@@ -76,6 +98,8 @@ public class TicketType {
     public Money getPrice() { return price; }
     public int getTotalQuantity() { return totalQuantity; }
     public int getAvailableQuantity() { return availableQuantity; }
+    public LocalDateTime getSaleStartDate() { return saleStartDate; }
+    public LocalDateTime getSaleEndDate() { return saleEndDate; }
 
     // ─── Setters (solo para el mapper de persistencia) ───────────────────────
 
@@ -86,4 +110,6 @@ public class TicketType {
     public void setPrice(Money price) { this.price = price; }
     public void setTotalQuantity(int totalQuantity) { this.totalQuantity = totalQuantity; }
     public void setAvailableQuantity(int availableQuantity) { this.availableQuantity = availableQuantity; }
+    public void setSaleStartDate(LocalDateTime saleStartDate) { this.saleStartDate = saleStartDate; }
+    public void setSaleEndDate(LocalDateTime saleEndDate) { this.saleEndDate = saleEndDate; }
 }

@@ -9,6 +9,6 @@ export const PrivateRoute = () => {
       <Outlet />
     </AppLayout>
   ) : (
-    <Navigate to="/login" replace />
+    <Navigate to="/" replace />
   )
 }

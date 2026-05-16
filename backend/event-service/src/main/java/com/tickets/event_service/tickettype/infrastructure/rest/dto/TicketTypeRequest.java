@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
@@ -26,4 +27,8 @@ public class TicketTypeRequest {
 
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
     private int totalQuantity;
+
+    private LocalDateTime saleStartDate;
+
+    private LocalDateTime saleEndDate;
 }

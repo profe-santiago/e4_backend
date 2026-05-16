@@ -6,13 +6,13 @@ import java.util.Set;
  * State Machine del ciclo de vida de una orden.
  * Patrón State embebido en el enum — cada estado define sus transiciones válidas.
  *
- * PENDING   → CONFIRMED (stock reservado + tickets generados)
- * PENDING   → FAILED    (sin stock o pago rechazado)
- * PENDING   → CANCELLED (cancelación manual del usuario)
- * CONFIRMED → REFUNDED
- * FAILED    → (terminal)
- * CANCELLED → (terminal)
- * REFUNDED  → (terminal)
+ * PENDING        → CONFIRMED, FAILED, CANCELLED
+ * CONFIRMED      → REFUND_PENDING
+ * REFUND_PENDING → REFUNDED  (reembolso aprobado en Stripe)
+ * REFUND_PENDING → CONFIRMED (reembolso fallido, permite reintentar)
+ * FAILED         → (terminal)
+ * CANCELLED      → (terminal)
+ * REFUNDED       → (terminal)
  */
 public enum OrderStatus {
 
@@ -25,7 +25,13 @@ public enum OrderStatus {
     CONFIRMED {
         @Override
         public Set<OrderStatus> allowedTransitions() {
-            return Set.of(REFUNDED);
+            return Set.of(REFUND_PENDING);
+        }
+    },
+    REFUND_PENDING {
+        @Override
+        public Set<OrderStatus> allowedTransitions() {
+            return Set.of(REFUNDED, CONFIRMED);
         }
     },
     FAILED {

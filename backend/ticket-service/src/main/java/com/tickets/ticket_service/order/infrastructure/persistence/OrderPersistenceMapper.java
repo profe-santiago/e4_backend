@@ -19,7 +19,7 @@ public class OrderPersistenceMapper {
         order.setUserId(entity.getUserId());
         order.setStatus(entity.getStatus());
         order.setTotalAmount(entity.getTotalAmount());
-        order.setPaymentMethodId(entity.getPaymentMethodId());
+        order.setPaymentIntentId(entity.getPaymentIntentId());
         order.setCreatedAt(entity.getCreatedAt());
         order.setUpdatedAt(entity.getUpdatedAt());
 
@@ -47,7 +47,7 @@ public class OrderPersistenceMapper {
         entity.setUserId(domain.getUserId());
         entity.setStatus(domain.getStatus());
         entity.setTotalAmount(domain.getTotalAmount());
-        entity.setPaymentMethodId(domain.getPaymentMethodId());
+        entity.setPaymentIntentId(domain.getPaymentIntentId());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
 

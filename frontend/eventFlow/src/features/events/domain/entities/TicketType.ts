@@ -7,6 +7,8 @@ export interface TicketType {
   totalQuantity: number
   availableQuantity: number
   description: string | null
+  saleStartDate?: string | null
+  saleEndDate?: string | null
 }
 
 export interface CreateTicketTypeRequest {
@@ -15,6 +17,8 @@ export interface CreateTicketTypeRequest {
   price: number
   currency?: string
   totalQuantity: number
+  saleStartDate?: string
+  saleEndDate?: string
 }
 
 export interface UpdateTicketTypeRequest {
@@ -23,4 +27,6 @@ export interface UpdateTicketTypeRequest {
   price: number
   currency?: string
   totalQuantity: number
+  saleStartDate?: string
+  saleEndDate?: string
 }

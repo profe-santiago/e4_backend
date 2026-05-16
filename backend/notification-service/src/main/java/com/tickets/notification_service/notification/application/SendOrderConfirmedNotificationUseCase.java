@@ -35,7 +35,7 @@ public class SendOrderConfirmedNotificationUseCase {
         int ticketCount = command.tickets() != null ? command.tickets().size() : 0;
 
         String subject = "Tu orden fue confirmada - #" + command.orderId();
-        String message = "Tu orden #" + command.orderId() + " fue confirmada por $" + command.totalAmount() + " MXN.";
+        String message = "Tu orden #" + command.orderId() + " fue confirmada por $" + command.totalAmount() + " USD.";
 
         Notification notification = Notification.create(
                 userId,

@@ -26,6 +26,8 @@ public class TicketTypePersistenceMapper {
         tt.setPrice(new Money(entity.getPrice(), entity.getPriceCurrency()));
         tt.setTotalQuantity(entity.getTotalQuantity());
         tt.setAvailableQuantity(entity.getAvailableQuantity());
+        tt.setSaleStartDate(entity.getSaleStartDate());
+        tt.setSaleEndDate(entity.getSaleEndDate());
         return tt;
     }
 
@@ -39,6 +41,8 @@ public class TicketTypePersistenceMapper {
         entity.setPriceCurrency(domain.getPrice().currency());
         entity.setTotalQuantity(domain.getTotalQuantity());
         entity.setAvailableQuantity(domain.getAvailableQuantity());
+        entity.setSaleStartDate(domain.getSaleStartDate());
+        entity.setSaleEndDate(domain.getSaleEndDate());
         return entity;
     }
 }

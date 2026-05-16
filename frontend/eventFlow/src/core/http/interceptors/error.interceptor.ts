@@ -12,8 +12,12 @@ export const applyErrorInterceptor = (client: AxiosInstance): void => {
       const status = error.response?.status
 
       if (status === 401) {
-        TokenStorage.remove()
-        window.location.href = '/login'
+        const url = error.config?.url ?? ''
+        // Don't redirect on the login/register calls themselves — let the form handle that error
+        if (!url.includes('/auth/')) {
+          TokenStorage.remove()
+          window.location.href = '/login'
+        }
         return Promise.reject(error)
       }
 
@@ -23,7 +27,7 @@ export const applyErrorInterceptor = (client: AxiosInstance): void => {
       }
 
       if (status && status >= 500) {
-        toast.error('Error del servidor. Intentá de nuevo más tarde.')
+        // El toast lo muestra cada mutación con contexto propio para evitar mensajes duplicados
         return Promise.reject(error)
       }
 

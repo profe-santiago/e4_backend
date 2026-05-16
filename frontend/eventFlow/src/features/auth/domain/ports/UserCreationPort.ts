@@ -5,5 +5,5 @@ export interface CreateUserData {
 }
 
 export interface UserCreationPort {
-  create(data: CreateUserData): Promise<void>
+  create(data: CreateUserData, token: string): Promise<void>
 }

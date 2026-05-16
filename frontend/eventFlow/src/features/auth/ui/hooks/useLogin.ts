@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
 import axios from 'axios'
 import { useAuthStore } from '@/store/auth.store'
 import { useAuthRepository } from '@/core/di/AuthContext'
@@ -8,12 +7,14 @@ import { LoginUseCase } from '../../application/use-cases/LoginUseCase'
 
 export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false)
+  const [credentialError, setCredentialError] = useState('')
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
   const authRepository = useAuthRepository()
 
   const login = async (email: string, password: string) => {
     setIsLoading(true)
+    setCredentialError('')
     try {
       const useCase = new LoginUseCase(authRepository)
       const result = await useCase.execute(email, password)
@@ -21,14 +22,14 @@ export const useLogin = () => {
       navigate('/')
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        toast.error('Email o contraseña incorrectos')
+        setCredentialError('Email o contraseña incorrectos')
       } else {
-        toast.error('Error al iniciar sesión')
+        setCredentialError('No se pudo iniciar sesión. Intentá de nuevo.')
       }
     } finally {
       setIsLoading(false)
     }
   }
 
-  return { login, isLoading }
+  return { login, isLoading, credentialError }
 }

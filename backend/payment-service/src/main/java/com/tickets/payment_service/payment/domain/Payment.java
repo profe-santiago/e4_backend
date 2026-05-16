@@ -15,7 +15,7 @@ public class Payment {
     private OrderId orderId;
     private UserId userId;
     private Money amount;
-    private String paymentMethodId;
+    private String paymentIntentId;
     private PaymentStatus status;
     private String transactionId;
     private LocalDateTime createdAt;
@@ -26,13 +26,13 @@ public class Payment {
 
     // ── Factory: nuevo pago ──────────────────────────────────────────────────
 
-    public static Payment create(OrderId orderId, UserId userId, Money amount, String paymentMethodId) {
+    public static Payment create(OrderId orderId, UserId userId, Money amount, String paymentIntentId) {
         Payment p = new Payment();
         p.id = PaymentId.generate();
         p.orderId = orderId;
         p.userId = userId;
         p.amount = amount;
-        p.paymentMethodId = paymentMethodId;
+        p.paymentIntentId = paymentIntentId;
         p.status = PaymentStatus.PENDING;
         p.createdAt = LocalDateTime.now();
         return p;
@@ -44,7 +44,7 @@ public class Payment {
                                        OrderId orderId,
                                        UserId userId,
                                        Money amount,
-                                       String paymentMethodId,
+                                       String paymentIntentId,
                                        PaymentStatus status,
                                        String transactionId,
                                        LocalDateTime createdAt,
@@ -54,7 +54,7 @@ public class Payment {
         p.orderId = orderId;
         p.userId = userId;
         p.amount = amount;
-        p.paymentMethodId = paymentMethodId;
+        p.paymentIntentId = paymentIntentId;
         p.status = status;
         p.transactionId = transactionId;
         p.createdAt = createdAt;
@@ -121,8 +121,8 @@ public class Payment {
         return amount;
     }
 
-    public String getPaymentMethodId() {
-        return paymentMethodId;
+    public String getPaymentIntentId() {
+        return paymentIntentId;
     }
 
     public PaymentStatus getStatus() {
