@@ -589,6 +589,9 @@ cd backend/notification-service && ./gradlew test
 ```
 
 El reporte HTML de cobertura (JaCoCo) se genera automáticamente en:
+```
+backend/<servicio>/build/reports/jacoco/test/html/index.html 
+```
 <img width="1620" height="700" alt="imagen" src="https://github.com/user-attachments/assets/0c5ceb14-bcc6-4d6c-bede-3c5349a4ea33" />
 
 
