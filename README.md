@@ -608,6 +608,85 @@ python -m pytest backend/tests/test_microservices.py -v
 
 ---
 
+## Despliegue en Producción (Railway)
+
+La aplicación está desplegada en **Railway** con cada microservicio como servicio independiente.
+
+### URLs de Producción
+
+| Componente | URL |
+|---|---|
+| **API Gateway** (punto de entrada) | `https://api-gateway-production-6c9a.up.railway.app` |
+| Auth Service (directo) | `https://auth-service-production-c13a.up.railway.app` |
+| User Service (directo) | `https://user-service-production-89b4.up.railway.app` |
+| Event Service (directo) | `https://event-service-production-5c26.up.railway.app` |
+| Ticket Service (directo) | `https://ticket-service-production-4142.up.railway.app` |
+| Payment Service (directo) | `https://payment-service-production-0e6b.up.railway.app` |
+| Notification Service (directo) | `https://notification-service-production-85bf.up.railway.app` |
+
+> Todo el tráfico de la demo se realiza a través del API Gateway. Las URLs directas de cada servicio son internas.
+
+### Health Check
+
+```bash
+curl https://api-gateway-production-6c9a.up.railway.app/actuator/health
+```
+
+### Infraestructura Cloud
+
+```
+Railway Project
+├── api-gateway          → https://api-gateway-production-6c9a.up.railway.app
+├── auth-service         → auth-service.railway.internal:8090
+├── user-service         → user-service.railway.internal:8081
+├── event-service        → event-service.railway.internal:8082
+├── ticket-service       → ticket-service.railway.internal:8083
+├── payment-service      → payment-service.railway.internal:8084
+├── notification-service → notification-service.railway.internal:8085
+├── PostgreSQL (x6)      → una BD por microservicio
+├── Redis                → rate limiting del gateway
+└── RabbitMQ             → mensajería asíncrona entre servicios
+```
+
+### Endpoints en Producción
+
+```bash
+BASE=https://api-gateway-production-6c9a.up.railway.app
+
+# Auth
+POST $BASE/api/v1/auth/register
+POST $BASE/api/v1/auth/login
+POST $BASE/api/v1/auth/refresh
+POST $BASE/api/v1/auth/logout
+
+# Usuarios (requiere JWT)
+POST   $BASE/api/v1/users
+GET    $BASE/api/v1/users/me
+PUT    $BASE/api/v1/users/me
+DELETE $BASE/api/v1/users/me
+
+# Eventos (GET público, resto requiere JWT)
+GET    $BASE/api/v1/events
+GET    $BASE/api/v1/events/{id}
+POST   $BASE/api/v1/events
+PUT    $BASE/api/v1/events/{id}
+DELETE $BASE/api/v1/events/{id}
+
+# Órdenes (requiere JWT)
+POST   $BASE/api/v1/orders
+GET    $BASE/api/v1/orders/my
+GET    $BASE/api/v1/orders/{id}
+PATCH  $BASE/api/v1/orders/{id}/cancel
+PATCH  $BASE/api/v1/orders/{id}/refund
+
+# Pagos, Tickets y Notificaciones (requiere JWT)
+GET    $BASE/api/v1/tickets/my
+GET    $BASE/api/v1/payments/my
+GET    $BASE/api/v1/notifications/my
+```
+
+---
+
 ## Comandos Útiles
 
 ```bash
