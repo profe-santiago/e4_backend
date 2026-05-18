@@ -66,7 +66,7 @@ export const QrScanner = ({ onScan, onClose }: Props) => {
 
 const styles: Record<string, React.CSSProperties> = {
   overlay:  { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' },
-  modal:    { background: t.bg, borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' },
+  modal:    { background: t.base, borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' },
   hint:     { color: t.textMuted, fontSize: '0.9rem', margin: 0, textAlign: 'center' },
   video:    { width: '100%', borderRadius: '8px', overflow: 'hidden' },
   closeBtn: { width: '100%', marginTop: '0.5rem' },

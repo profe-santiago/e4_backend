@@ -20,7 +20,6 @@ import { formatDateTimeShort } from '@/shared/utils/formatDate'
 
 const isUrl = (s: string) => { try { return !!new URL(s) } catch { return false } }
 const todayStr = () => new Date().toISOString().split('T')[0]
-const nowStr = () => new Date().toISOString().slice(0, 16)
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 

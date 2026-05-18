@@ -216,7 +216,8 @@ export const EventDetailPage = () => {
   )
 }
 
-const s: Record<string, React.CSSProperties> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const s: Record<string, any> = {
   container:      { maxWidth: '860px', margin: '0 auto' },
   feedback:       { textAlign: 'center', padding: '4rem', color: t.textMuted },
   error:          { textAlign: 'center', padding: '4rem', color: t.error },
