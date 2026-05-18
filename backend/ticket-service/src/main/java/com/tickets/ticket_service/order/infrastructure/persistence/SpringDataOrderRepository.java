@@ -21,4 +21,6 @@ interface SpringDataOrderRepository extends JpaRepository<OrderJpaEntity, UUID> 
     @Query("SELECT o FROM OrderJpaEntity o LEFT JOIN FETCH o.items " +
            "WHERE o.status = 'PENDING' AND o.createdAt < :threshold")
     List<OrderJpaEntity> findExpiredPendingOrders(@Param("threshold") LocalDateTime threshold);
+
+    boolean existsByPaymentIntentId(String paymentIntentId);
 }

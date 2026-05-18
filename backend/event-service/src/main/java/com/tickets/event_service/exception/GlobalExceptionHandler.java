@@ -1,6 +1,7 @@
 package com.tickets.event_service.exception;
 
 import com.tickets.event_service.tickettype.domain.InsufficientStockException;
+import com.tickets.event_service.tickettype.domain.SaleNotAvailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
@@ -33,6 +34,11 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
     }
 
+    @ExceptionHandler(EventNotDeletableException.class)
+    public ProblemDetail handleNotDeletable(EventNotDeletableException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+    }
+
     @ExceptionHandler(UnauthorizedActionException.class)
     public ProblemDetail handleUnauthorized(UnauthorizedActionException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
@@ -41,6 +47,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InsufficientStockException.class)
     public ProblemDetail handleInsufficientStock(InsufficientStockException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(SaleNotAvailableException.class)
+    public ProblemDetail handleSaleNotAvailable(SaleNotAvailableException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+    }
+
+    @ExceptionHandler(ImageUploadException.class)
+    public ProblemDetail handleImageUpload(ImageUploadException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

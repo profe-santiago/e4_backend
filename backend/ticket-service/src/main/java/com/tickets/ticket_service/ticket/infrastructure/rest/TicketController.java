@@ -72,11 +72,13 @@ public class TicketController {
 
         return ValidateTicketResponse.builder()
                 .ticketId(ticket.getId())
+                .orderId(ticket.getOrderId())
                 .eventId(ticket.getEventId())
                 .ticketTypeId(ticket.getTicketTypeId())
                 .userId(ticket.getUserId())
                 .status(ticket.getStatus())
                 .message("Ingreso aprobado")
+                .purchasedAt(ticket.getPurchasedAt())
                 .build();
     }
 }

@@ -69,7 +69,7 @@ public class ConfirmOrderUseCase {
 
         eventPublisher.publishOrderConfirmed(
                 saved.getId(), saved.getUserId(), saved.getTotalAmount(),
-                saved.getPaymentMethodId(), ticketData);
+                saved.getPaymentIntentId(), ticketData);
 
         return saved;
     }

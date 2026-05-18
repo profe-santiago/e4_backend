@@ -16,7 +16,7 @@ public class OrderResponse {
     private UUID userId;
     private OrderStatus status;
     private BigDecimal totalAmount;
-    private String paymentMethodId;
+    private String paymentIntentId;
     private List<OrderItemResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

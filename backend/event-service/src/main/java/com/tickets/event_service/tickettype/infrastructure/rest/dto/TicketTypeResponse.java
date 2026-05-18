@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -18,4 +19,6 @@ public class TicketTypeResponse {
     private String currency;
     private int totalQuantity;
     private int availableQuantity;
+    private LocalDateTime saleStartDate;
+    private LocalDateTime saleEndDate;
 }

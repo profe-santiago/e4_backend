@@ -1,0 +1,600 @@
+{
+  "info": {
+    "name": "EventFlow API",
+    "description": "Colección completa de endpoints del sistema EventFlow. Importar en Postman y configurar las variables de colección antes de usar.\n\nFlujo básico:\n1. Ejecutar **Register** o **Login** → el token se guarda automáticamente\n2. Ejecutar los demás endpoints con el token guardado\n\nVariables de colección: baseUrl, token, refreshToken, userId, eventId, ticketTypeId, orderId, ticketId, notificationId",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",       "value": "http://localhost:8080" },
+    { "key": "token",         "value": "" },
+    { "key": "refreshToken",  "value": "" },
+    { "key": "userId",        "value": "" },
+    { "key": "eventId",       "value": "" },
+    { "key": "ticketTypeId",  "value": "" },
+    { "key": "orderId",       "value": "" },
+    { "key": "ticketId",      "value": "" },
+    { "key": "notificationId","value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.token) {",
+                "  pm.collectionVariables.set('token', data.token);",
+                "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api","v1","auth","register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"buyer@example.com\",\n  \"password\": \"Buyer123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.token) {",
+                "  pm.collectionVariables.set('token', data.token);",
+                "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api","v1","auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"buyer@test.com\",\n  \"password\": \"Buyer123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.token) {",
+                "  pm.collectionVariables.set('token', data.token);",
+                "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api","v1","auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@test.com\",\n  \"password\": \"Admin123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.token) {",
+                "  pm.collectionVariables.set('token', data.token);",
+                "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api","v1","auth","refresh"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/logout", "host": ["{{baseUrl}}"], "path": ["api","v1","auth","logout"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create Profile",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.id) pm.collectionVariables.set('userId', data.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/users", "host": ["{{baseUrl}}"], "path": ["api","v1","users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"López\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/users/me", "host": ["{{baseUrl}}"], "path": ["api","v1","users","me"] }
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/users/me", "host": ["{{baseUrl}}"], "path": ["api","v1","users","me"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"López\",\n  \"phone\": \"+54911234567\",\n  \"birthDate\": \"1995-06-15\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete My Account",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/users/me", "host": ["{{baseUrl}}"], "path": ["api","v1","users","me"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List Published Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/events?status=PUBLISHED&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","events"],
+              "query": [
+                { "key": "status", "value": "PUBLISHED" },
+                { "key": "page",   "value": "0" },
+                { "key": "size",   "value": "20" },
+                { "key": "search",     "value": "", "disabled": true },
+                { "key": "categoryId", "value": "", "disabled": true },
+                { "key": "city",       "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Event by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}"] }
+          }
+        },
+        {
+          "name": "My Events (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/my", "host": ["{{baseUrl}}"], "path": ["api","v1","events","my"] }
+          }
+        },
+        {
+          "name": "Create Event (Admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.id) pm.collectionVariables.set('eventId', data.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/events", "host": ["{{baseUrl}}"], "path": ["api","v1","events"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Rock en el Parque 2025\",\n  \"description\": \"Festival de música en vivo\",\n  \"categoryId\": 1,\n  \"venue\": \"Parque Sarmiento\",\n  \"city\": \"Buenos Aires\",\n  \"country\": \"Argentina\",\n  \"startDate\": \"2025-12-20T18:00:00\",\n  \"endDate\": \"2025-12-20T23:00:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Event (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Rock en el Parque 2025 — Edición Especial\",\n  \"description\": \"Festival de música en vivo con artistas internacionales\",\n  \"categoryId\": 1,\n  \"venue\": \"Parque Sarmiento\",\n  \"city\": \"Buenos Aires\",\n  \"country\": \"Argentina\",\n  \"startDate\": \"2025-12-20T18:00:00\",\n  \"endDate\": \"2025-12-20T23:00:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Event Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/status?status=PUBLISHED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","events","{{eventId}}","status"],
+              "query": [{ "key": "status", "value": "PUBLISHED", "description": "DRAFT | PUBLISHED | CANCELLED" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Event — solo DRAFT (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Ticket Types",
+      "item": [
+        {
+          "name": "List Ticket Types",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/ticket-types", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}","ticket-types"] }
+          }
+        },
+        {
+          "name": "Create Ticket Type (Admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.id) pm.collectionVariables.set('ticketTypeId', data.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/ticket-types", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}","ticket-types"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General\",\n  \"description\": \"Acceso general al evento\",\n  \"price\": 25.00,\n  \"currency\": \"USD\",\n  \"totalQuantity\": 200,\n  \"saleStartDate\": \"2025-10-01T00:00:00\",\n  \"saleEndDate\": \"2025-12-19T23:59:59\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Ticket Type (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/ticket-types/{{ticketTypeId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}","ticket-types","{{ticketTypeId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General VIP\",\n  \"description\": \"Acceso general con área VIP\",\n  \"price\": 35.00,\n  \"currency\": \"USD\",\n  \"totalQuantity\": 100,\n  \"saleStartDate\": \"2025-10-01T00:00:00\",\n  \"saleEndDate\": \"2025-12-19T23:59:59\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Ticket Type (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/ticket-types/{{ticketTypeId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}","ticket-types","{{ticketTypeId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/categories", "host": ["{{baseUrl}}"], "path": ["api","v1","categories"] }
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/categories/1", "host": ["{{baseUrl}}"], "path": ["api","v1","categories","1"] }
+          }
+        },
+        {
+          "name": "Create Category (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/categories", "host": ["{{baseUrl}}"], "path": ["api","v1","categories"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Música\",\n  \"description\": \"Conciertos, festivales y eventos musicales\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Category (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/categories/1", "host": ["{{baseUrl}}"], "path": ["api","v1","categories","1"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Música en Vivo\",\n  \"description\": \"Conciertos, festivales y eventos musicales en vivo\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Category (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/categories/1", "host": ["{{baseUrl}}"], "path": ["api","v1","categories","1"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment Intent",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.paymentIntentId) pm.collectionVariables.set('paymentIntentId', data.paymentIntentId);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/payments/intent", "host": ["{{baseUrl}}"], "path": ["api","v1","payments","intent"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50.00,\n  \"currency\": \"USD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Payment by Order ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/payments/order/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","payments","order","{{orderId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.id) pm.collectionVariables.set('orderId', data.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/orders", "host": ["{{baseUrl}}"], "path": ["api","v1","orders"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"eventId\": \"{{eventId}}\",\n      \"ticketTypeId\": {{ticketTypeId}},\n      \"quantity\": 2\n    }\n  ],\n  \"paymentIntentId\": \"pi_...\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "My Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/my?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","orders","my"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","orders","{{orderId}}"] }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api","v1","orders","{{orderId}}","cancel"] }
+          }
+        },
+        {
+          "name": "Request Refund",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/refund", "host": ["{{baseUrl}}"], "path": ["api","v1","orders","{{orderId}}","refund"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "My Tickets",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/my?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","tickets","my"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ticket by ID (con QR)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.id) pm.collectionVariables.set('ticketId', data.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/tickets/{{ticketId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","tickets","{{ticketId}}"] }
+          }
+        },
+        {
+          "name": "Validate Ticket by QR (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/tickets/validate", "host": ["{{baseUrl}}"], "path": ["api","v1","tickets","validate"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCode\": \"<contenido-del-qr>\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/users/{{userId}}?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","notifications","users","{{userId}}"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+
+  ]
+}

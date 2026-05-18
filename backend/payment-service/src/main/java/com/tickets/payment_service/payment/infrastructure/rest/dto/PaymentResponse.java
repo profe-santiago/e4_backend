@@ -17,7 +17,7 @@ public class PaymentResponse {
     private BigDecimal amount;
     private String currency;
     private PaymentStatus status;
-    private String paymentMethodId;
+    private String paymentIntentId;
     private String transactionId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

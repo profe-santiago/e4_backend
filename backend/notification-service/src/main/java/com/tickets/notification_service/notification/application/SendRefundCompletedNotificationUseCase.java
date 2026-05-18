@@ -31,6 +31,11 @@ public class SendRefundCompletedNotificationUseCase {
     public void execute(SendRefundCompletedCommand command) {
         log.info("[UC] SendRefundCompleted → orderId={}, userId={}", command.orderId(), command.userId());
 
+        if (repository.existsByReferenceIdAndType(command.orderId(), NotificationType.REFUND_COMPLETED)) {
+            log.warn("[UC] Notificación duplicada ignorada → orderId={}, type=REFUND_COMPLETED", command.orderId());
+            return;
+        }
+
         UserId userId = UserId.of(command.userId());
 
         String subject = "Tu reembolso fue procesado - Orden #" + command.orderId();

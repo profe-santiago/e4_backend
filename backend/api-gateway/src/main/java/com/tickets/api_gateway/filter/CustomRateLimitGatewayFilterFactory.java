@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Component
@@ -91,24 +92,30 @@ public class CustomRateLimitGatewayFilterFactory implements GlobalFilter, Ordere
                 rateLimitKey = "rate_limit:ip:" + getClientIp(exchange);
             }
 
-        // Check rate limit using token bucket algorithm
+        // Check rate limit — fail open if Redis is unavailable or slow
         return checkRateLimit(rateLimitKey, replenishRate, burstCapacity)
-            .flatMap(allowed -> {
-                if (!allowed) {
+            .timeout(Duration.ofMillis(500))
+            .onErrorResume(e -> {
+                if (e instanceof TimeoutException) {
+                    log.warn("Rate limit Redis timeout for key: {} — allowing request", rateLimitKey);
+                } else {
+                    log.warn("Rate limit Redis error for key: {} — allowing request: {}", rateLimitKey, e.getMessage());
+                }
+                return Mono.just(-1L);
+            })
+            .flatMap(remaining -> {
+                if (remaining == -2L) {
                     log.warn("Rate limit exceeded for key: {}", rateLimitKey);
                     exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
                     exchange.getResponse().getHeaders().add("X-RateLimit-Retry-After-Seconds", "60");
                     return exchange.getResponse().setComplete();
                 }
-
-                // Add rate limit headers
-                return getRemainingRequests(rateLimitKey, burstCapacity)
-                    .flatMap(remaining -> {
-                        exchange.getResponse().getHeaders().add("X-RateLimit-Limit", String.valueOf(burstCapacity));
-                        exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", String.valueOf(remaining));
-                        exchange.getResponse().getHeaders().add("X-RateLimit-Reset", String.valueOf(System.currentTimeMillis() / 1000 + 60));
-                        return chain.filter(exchange);
-                    });
+                if (remaining >= 0) {
+                    exchange.getResponse().getHeaders().add("X-RateLimit-Limit", String.valueOf(burstCapacity));
+                    exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", String.valueOf(remaining));
+                    exchange.getResponse().getHeaders().add("X-RateLimit-Reset", String.valueOf(System.currentTimeMillis() / 1000 + 60));
+                }
+                return chain.filter(exchange);
             });
     }
 
@@ -130,42 +137,33 @@ public class CustomRateLimitGatewayFilterFactory implements GlobalFilter, Ordere
         ).getAddress().getHostAddress();
     }
 
-    private Mono<Boolean> checkRateLimit(String key, int replenishRate, int burstCapacity) {
+    /**
+     * Returns remaining tokens after consuming one, -2L if rate limit exceeded, or -1L on error (fail open).
+     */
+    private Mono<Long> checkRateLimit(String key, int replenishRate, int burstCapacity) {
         String tokensKey = key + ":tokens";
         String timestampKey = key + ":timestamp";
         long now = System.currentTimeMillis();
 
         return redisTemplate.opsForValue().get(tokensKey)
-            .defaultIfEmpty(String.valueOf(burstCapacity)) // Start with full burst capacity
+            .defaultIfEmpty(String.valueOf(burstCapacity))
             .zipWith(redisTemplate.opsForValue().get(timestampKey).defaultIfEmpty(String.valueOf(now)))
             .flatMap(tuple -> {
                 double tokens = Double.parseDouble(tuple.getT1());
                 long lastRefill = Long.parseLong(tuple.getT2());
 
-                // Calculate tokens to add based on time elapsed
                 long timeElapsed = now - lastRefill;
-                double tokensToAdd = (timeElapsed / 1000.0) * (replenishRate / 60.0); // per second rate
-
+                double tokensToAdd = (timeElapsed / 1000.0) * (replenishRate / 60.0);
                 tokens = Math.min(burstCapacity, tokens + tokensToAdd);
 
                 if (tokens < 1) {
-                    return Mono.just(false);
+                    return Mono.just(-2L);
                 }
 
-                // Consume one token
                 double finalTokens = tokens - 1;
-
-                // Update Redis
                 return redisTemplate.opsForValue().set(tokensKey, String.valueOf(finalTokens), Duration.ofMinutes(2))
                     .then(redisTemplate.opsForValue().set(timestampKey, String.valueOf(now), Duration.ofMinutes(2)))
-                    .thenReturn(true);
+                    .thenReturn((long) Math.floor(finalTokens));
             });
-    }
-
-    private Mono<Integer> getRemainingRequests(String key, int burstCapacity) {
-        String tokensKey = key + ":tokens";
-        return redisTemplate.opsForValue().get(tokensKey)
-            .defaultIfEmpty(String.valueOf(burstCapacity))
-            .map(tokens -> (int) Math.floor(Double.parseDouble(tokens)));
     }
 }

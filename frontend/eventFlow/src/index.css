@@ -1,0 +1,185 @@
+/* ── Deep Ocean Design System ─────────────────────────────────────────────── */
+:root {
+  --base:         #0B1720;
+  --surface:      #132232;
+  --surface-2:    #1A2F44;
+  --border:       #1E3D52;
+  --border-2:     #2A5070;
+  --accent:       #0AADA8;
+  --accent-hover: #0CC5BF;
+  --accent-dark:  #088B87;
+  --text:         #E2EEF4;
+  --text-muted:   #6B8FA3;
+  --text-dim:     #4A6A7E;
+  --error:        #F87171;
+  --success:      #34D399;
+  --warning:      #FBBF24;
+
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body { margin: 0; }
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 700; color: var(--text); }
+p { margin: 0; }
+a { color: inherit; }
+
+/* ── Form inputs ─────────────────────────────────────────────────────────── */
+.ef-input {
+  width: 100%;
+  padding: 0.65rem 0.875rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ef-input::placeholder { color: var(--text-dim); }
+.ef-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(10, 173, 168, 0.18);
+}
+.ef-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Primary button ──────────────────────────────────────────────────────── */
+.ef-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.ef-btn:hover:not(:disabled) { background: var(--accent-hover); }
+.ef-btn:active:not(:disabled) { background: var(--accent-dark); transform: translateY(1px); }
+.ef-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.ef-btn-full { width: 100%; }
+
+/* ── Ghost/outline button ────────────────────────────────────────────────── */
+.ef-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.ef-btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.ef-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Danger button ───────────────────────────────────────────────────────── */
+.ef-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: #b91c1c;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ef-btn-danger:hover:not(:disabled) { background: #dc2626; }
+.ef-btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.ef-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+/* ── Label ───────────────────────────────────────────────────────────────── */
+.ef-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+/* ── Error message ───────────────────────────────────────────────────────── */
+.ef-error { color: var(--error); font-size: 0.82rem; margin-top: 0.2rem; }
+
+/* ── Link ────────────────────────────────────────────────────────────────── */
+.ef-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+.ef-link:hover { color: var(--accent-hover); text-decoration: underline; }
+
+/* ── Sidebar nav item ────────────────────────────────────────────────────── */
+.ef-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 1rem;
+  margin: 0 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.ef-nav-item:hover { background: rgba(10,173,168,0.1); color: var(--text); }
+.ef-nav-item.active { background: rgba(10,173,168,0.15); color: var(--accent); }
+
+/* ── Event card hover ────────────────────────────────────────────────────── */
+.ef-event-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.ef-event-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(10,173,168,0.12);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--base); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }

@@ -16,6 +16,6 @@ public record ProcessPaymentCommand(
         UUID userId,
         BigDecimal amount,
         String currency,
-        String paymentMethodId
+        String paymentIntentId
 ) {
 }

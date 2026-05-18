@@ -1,5 +1,6 @@
 package com.tickets.payment_service.payment.domain.port;
 
+import com.tickets.payment_service.payment.domain.CreateIntentResult;
 import com.tickets.payment_service.payment.domain.Money;
 import com.tickets.payment_service.payment.domain.OrderId;
 import com.tickets.payment_service.payment.domain.PaymentChargeResult;
@@ -14,14 +15,23 @@ import com.tickets.payment_service.payment.domain.PaymentChargeResult;
 public interface PaymentGateway {
 
     /**
-     * Intenta cobrar el monto al método de pago dado.
+     * Crea un PaymentIntent sin confirmarlo — el frontend lo confirma con 3DS si es necesario.
      *
-     * @param amount          monto y moneda a cobrar
-     * @param paymentMethodId identificador del método de pago del proveedor (e.g. pm_xxxxx de Stripe)
-     * @param orderId         identificador de la orden; se usa como clave de idempotencia
-     * @return resultado del cobro — nunca lanza excepción; los errores quedan en {@code failureReason}
+     * @param amount monto y moneda del intento
+     * @return clientSecret (para confirmar en el browser) + paymentIntentId
      */
-    PaymentChargeResult charge(Money amount, String paymentMethodId, OrderId orderId);
+    CreateIntentResult createIntent(Money amount);
+
+    /**
+     * Verifica que un PaymentIntent ya confirmado por el frontend haya tenido éxito.
+     * Valida status y que el monto coincida con el esperado.
+     *
+     * @param paymentIntentId ID del PaymentIntent confirmado por el frontend (pi_xxxxx)
+     * @param expectedAmount  monto esperado según la orden (protección contra manipulación)
+     * @param orderId         identificador de la orden; se usa como clave de idempotencia
+     * @return resultado de la verificación — nunca lanza excepción
+     */
+    PaymentChargeResult charge(Money expectedAmount, String paymentIntentId, OrderId orderId);
 
     /**
      * Reembolsa un pago previamente aprobado.

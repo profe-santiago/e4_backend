@@ -2,7 +2,6 @@ package com.tickets.api_gateway.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,29 +13,34 @@ import java.util.Map;
 @RequestMapping("/fallback")
 public class FallbackController {
 
-    @GetMapping("/auth")
+    @RequestMapping("/auth")
     public ResponseEntity<Map<String, Object>> authServiceFallback() {
         return buildFallbackResponse("Authentication Service is temporarily unavailable. Please try again later.");
     }
 
-    @GetMapping("/user")
+    @RequestMapping("/user")
     public ResponseEntity<Map<String, Object>> userServiceFallback() {
         return buildFallbackResponse("User Service is temporarily unavailable. Please try again later.");
     }
 
-    @GetMapping("/event")
+    @RequestMapping("/event")
     public ResponseEntity<Map<String, Object>> eventServiceFallback() {
         return buildFallbackResponse("Event Service is temporarily unavailable. Please try again later.");
     }
 
-    @GetMapping("/ticket")
+    @RequestMapping("/ticket")
     public ResponseEntity<Map<String, Object>> ticketServiceFallback() {
         return buildFallbackResponse("Ticket Service is temporarily unavailable. Please try again later.");
     }
 
-    @GetMapping("/payment")
+    @RequestMapping("/payment")
     public ResponseEntity<Map<String, Object>> paymentServiceFallback() {
         return buildFallbackResponse("Payment Service is temporarily unavailable. Please try again later.");
+    }
+
+    @RequestMapping("/notification")
+    public ResponseEntity<Map<String, Object>> notificationServiceFallback() {
+        return buildFallbackResponse("Notification Service is temporarily unavailable. Please try again later.");
     }
 
     private ResponseEntity<Map<String, Object>> buildFallbackResponse(String message) {

@@ -8,6 +8,7 @@ import com.tickets.notification_service.notification.infrastructure.messaging.ev
 import com.tickets.notification_service.notification.infrastructure.messaging.event.RefundCompletedEvent;
 import com.tickets.notification_service.notification.infrastructure.messaging.event.RefundFailedEvent;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.DefaultClassMapper;
@@ -202,6 +203,16 @@ public class RabbitMQConfig {
         return template;
     }
 
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(messageConverter());
+        factory.setDefaultRequeueRejected(false);
+        return factory;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
@@ -215,6 +226,12 @@ public class RabbitMQConfig {
         mappings.put("OrderCancelledEvent",   OrderCancelledEvent.class);
         mappings.put("RefundCompletedEvent",  RefundCompletedEvent.class);
         mappings.put("RefundFailedEvent",     RefundFailedEvent.class);
+        // Fallback FQCNs por si algún servicio publica sin alias
+        mappings.put("com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderConfirmedEvent",  OrderConfirmedEvent.class);
+        mappings.put("com.tickets.ticket_service.order.infrastructure.messaging.dto.OrderCancelledEvent",  OrderCancelledEvent.class);
+        mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.PaymentCompletedEvent", PaymentCompletedEvent.class);
+        mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.RefundCompletedEvent",  RefundCompletedEvent.class);
+        mappings.put("com.tickets.payment_service.payment.infrastructure.messaging.event.RefundFailedEvent",     RefundFailedEvent.class);
         return mappings;
     }
 

@@ -269,17 +269,6 @@ El límite estricto en `/orders` (10/min) previene:
 - Scalpers automatizados
 - Abuso de la API
 
-## Mejoras Futuras
-
-- [ ] Métricas con Prometheus (exportar rate limit hits, circuit breaker states)
-- [ ] Distributed Tracing con Zipkin/Jaeger
-- [ ] API Key authentication para clientes externos
-- [ ] Request/Response logging con correlation IDs
-- [ ] Rate limiting por endpoint específico (configurable vía BD)
-- [ ] Admin API para ajustar rate limits en caliente
-- [ ] Integración con WAF (Web Application Firewall)
-- [ ] GeoIP blocking para prevenir fraude
-
 ## Referencias
 
 - [Spring Cloud Gateway Docs](https://docs.spring.io/spring-cloud-gateway/docs/current/reference/html/)

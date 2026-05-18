@@ -1,5 +1,6 @@
 package com.tickets.user_service.user.infrastructure.rest;
 
+import com.tickets.user_service.exception.UnauthorizedActionException;
 import com.tickets.user_service.shared.SecurityUtils;
 import com.tickets.user_service.user.application.CreateUserUseCase;
 import com.tickets.user_service.user.application.DeleteUserUseCase;
@@ -59,7 +60,12 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener perfil por ID")
-    public UserResponse getById(@PathVariable UUID id) {
+    public UserResponse getById(@PathVariable UUID id, Authentication auth) {
+        UUID requesterId = SecurityUtils.getUserId(auth);
+        boolean isAdmin = SecurityUtils.isAdmin(auth);
+        if (!isAdmin && !id.equals(requesterId)) {
+            throw new UnauthorizedActionException("No tenés permisos para ver este perfil");
+        }
         return mapper.toResponse(getUserById.execute(id));
     }
 

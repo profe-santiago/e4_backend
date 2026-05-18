@@ -18,6 +18,6 @@ public class CreateOrderRequest {
     @Valid
     private List<CreateOrderItemRequest> items;
 
-    @NotBlank(message = "El método de pago es requerido")
-    private String paymentMethodId;
+    @NotBlank(message = "El ID del intento de pago es requerido")
+    private String paymentIntentId;
 }

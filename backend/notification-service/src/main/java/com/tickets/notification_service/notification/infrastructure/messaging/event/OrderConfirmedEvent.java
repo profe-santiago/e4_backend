@@ -20,7 +20,7 @@ public class OrderConfirmedEvent {
     private UUID orderId;
     private UUID userId;
     private BigDecimal totalAmount;
-    private String paymentMethodId;
+    private String paymentIntentId;
     private List<ConfirmedTicket> tickets;
 
     @Data

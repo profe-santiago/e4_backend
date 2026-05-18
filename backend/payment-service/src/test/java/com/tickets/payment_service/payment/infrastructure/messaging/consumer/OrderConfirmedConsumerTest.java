@@ -32,7 +32,7 @@ class OrderConfirmedConsumerTest {
         UUID userId  = UUID.randomUUID();
 
         OrderConfirmedEvent event = new OrderConfirmedEvent(
-                orderId, userId, new BigDecimal("250.00"), "pm_test_visa", List.of());
+                orderId, userId, new BigDecimal("250.00"), "pi_test_visa", List.of());
 
         consumer.handle(event);
 
@@ -43,7 +43,7 @@ class OrderConfirmedConsumerTest {
         assertThat(command.orderId()).isEqualTo(orderId);
         assertThat(command.userId()).isEqualTo(userId);
         assertThat(command.amount()).isEqualByComparingTo("250.00");
-        assertThat(command.currency()).isEqualTo("MXN");
-        assertThat(command.paymentMethodId()).isEqualTo("pm_test_visa");
+        assertThat(command.currency()).isEqualTo("USD");
+        assertThat(command.paymentIntentId()).isEqualTo("pi_test_visa");
     }
 }

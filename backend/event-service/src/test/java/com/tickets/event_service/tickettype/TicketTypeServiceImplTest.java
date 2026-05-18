@@ -1,24 +1,26 @@
 package com.tickets.event_service.tickettype;
 
-import com.tickets.event_service.event.Event;
-import com.tickets.event_service.event.EventRepository;
-import com.tickets.event_service.event.EventStatus;
+import com.tickets.event_service.event.domain.Event;
+import com.tickets.event_service.event.domain.EventRepository;
+import com.tickets.event_service.event.domain.EventStatus;
 import com.tickets.event_service.exception.EventNotFoundException;
 import com.tickets.event_service.exception.TicketTypeNotFoundException;
 import com.tickets.event_service.exception.UnauthorizedActionException;
-import com.tickets.event_service.tickettype.dto.TicketTypeRequest;
-import com.tickets.event_service.tickettype.dto.TicketTypeResponse;
+import com.tickets.event_service.tickettype.application.CreateTicketTypeUseCase;
+import com.tickets.event_service.tickettype.application.DeleteTicketTypeUseCase;
+import com.tickets.event_service.tickettype.application.GetTicketTypeUseCase;
+import com.tickets.event_service.tickettype.application.ListTicketTypesUseCase;
+import com.tickets.event_service.tickettype.application.dto.CreateTicketTypeCommand;
+import com.tickets.event_service.tickettype.domain.Money;
+import com.tickets.event_service.tickettype.domain.TicketType;
+import com.tickets.event_service.tickettype.domain.TicketTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,24 +35,16 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("TicketTypeServiceImpl")
+@DisplayName("TicketType UseCases")
 class TicketTypeServiceImplTest {
 
-    @Mock
-    private TicketTypeRepository ticketTypeRepository;
-
-    @Mock
-    private EventRepository eventRepository;
-
-    @InjectMocks
-    private TicketTypeServiceImpl ticketTypeService;
+    @Mock private TicketTypeRepository ticketTypeRepository;
+    @Mock private EventRepository eventRepository;
 
     private UUID organizerId;
     private UUID eventId;
     private Event existingEvent;
     private TicketType existingTicketType;
-    private Authentication organizerAuth;
-    private Authentication anotherUserAuth;
 
     @BeforeEach
     void setUp() {
@@ -62,42 +56,48 @@ class TicketTypeServiceImplTest {
         existingEvent.setOrganizerId(organizerId);
         existingEvent.setStatus(EventStatus.DRAFT);
 
-        existingTicketType = new TicketType();
+        existingTicketType = TicketType.create(
+                eventId, "VIP", null,
+                Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
         existingTicketType.setId(1L);
-        existingTicketType.setEvent(existingEvent);
-        existingTicketType.setName("VIP");
-        existingTicketType.setPrice(new BigDecimal("150.00"));
-        existingTicketType.setTotalQuantity(100);
-        existingTicketType.setAvailableQuantity(100);
-
-        organizerAuth   = buildAuth(organizerId, "BUYER");
-        anotherUserAuth = buildAuth(UUID.randomUUID(), "BUYER");
     }
 
     @Nested
-    @DisplayName("create")
+    @DisplayName("CreateTicketTypeUseCase")
     class Create {
+
+        private CreateTicketTypeUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new CreateTicketTypeUseCase(eventRepository, ticketTypeRepository);
+        }
 
         @Test
         @DisplayName("debe crear el tipo de ticket cuando el requester es el organizador")
         void shouldCreate_whenOrganizer() {
-            TicketTypeRequest request = buildRequest();
+            CreateTicketTypeCommand command = new CreateTicketTypeCommand(
+                    eventId, organizerId, false,
+                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
             given(ticketTypeRepository.save(any(TicketType.class))).willReturn(existingTicketType);
 
-            TicketTypeResponse response = ticketTypeService.create(eventId, request, organizerAuth);
+            TicketType result = useCase.execute(command);
 
-            assertThat(response.getName()).isEqualTo("VIP");
-            assertThat(response.getAvailableQuantity()).isEqualTo(existingTicketType.getTotalQuantity());
+            assertThat(result.getName()).isEqualTo("VIP");
+            assertThat(result.getAvailableQuantity()).isEqualTo(existingTicketType.getTotalQuantity());
             then(ticketTypeRepository).should().save(any(TicketType.class));
         }
 
         @Test
         @DisplayName("debe lanzar UnauthorizedActionException cuando el requester no es el organizador")
         void shouldThrow_whenNotOrganizer() {
+            CreateTicketTypeCommand command = new CreateTicketTypeCommand(
+                    eventId, UUID.randomUUID(), false,
+                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
-            assertThatThrownBy(() -> ticketTypeService.create(eventId, buildRequest(), anotherUserAuth))
+            assertThatThrownBy(() -> useCase.execute(command))
                     .isInstanceOf(UnauthorizedActionException.class);
 
             then(ticketTypeRepository).should(never()).save(any());
@@ -107,16 +107,26 @@ class TicketTypeServiceImplTest {
         @DisplayName("debe lanzar EventNotFoundException cuando el evento no existe")
         void shouldThrow_whenEventNotFound() {
             UUID unknownId = UUID.randomUUID();
+            CreateTicketTypeCommand command = new CreateTicketTypeCommand(
+                    unknownId, organizerId, false,
+                    "VIP", null, Money.ofUSD(new BigDecimal("150.00")), 100, null, null);
             given(eventRepository.findById(unknownId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> ticketTypeService.create(unknownId, buildRequest(), organizerAuth))
+            assertThatThrownBy(() -> useCase.execute(command))
                     .isInstanceOf(EventNotFoundException.class);
         }
     }
 
     @Nested
-    @DisplayName("findAllByEvent")
+    @DisplayName("ListTicketTypesUseCase")
     class FindAllByEvent {
+
+        private ListTicketTypesUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new ListTicketTypesUseCase(eventRepository, ticketTypeRepository);
+        }
 
         @Test
         @DisplayName("debe retornar los tipos de ticket del evento")
@@ -124,7 +134,7 @@ class TicketTypeServiceImplTest {
             given(eventRepository.existsById(eventId)).willReturn(true);
             given(ticketTypeRepository.findAllByEventId(eventId)).willReturn(List.of(existingTicketType));
 
-            List<TicketTypeResponse> result = ticketTypeService.findAllByEvent(eventId);
+            List<TicketType> result = useCase.execute(eventId);
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getName()).isEqualTo("VIP");
@@ -135,14 +145,21 @@ class TicketTypeServiceImplTest {
         void shouldThrow_whenEventNotFound() {
             given(eventRepository.existsById(eventId)).willReturn(false);
 
-            assertThatThrownBy(() -> ticketTypeService.findAllByEvent(eventId))
+            assertThatThrownBy(() -> useCase.execute(eventId))
                     .isInstanceOf(EventNotFoundException.class);
         }
     }
 
     @Nested
-    @DisplayName("findById")
+    @DisplayName("GetTicketTypeUseCase")
     class FindById {
+
+        private GetTicketTypeUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new GetTicketTypeUseCase(ticketTypeRepository);
+        }
 
         @Test
         @DisplayName("debe retornar el tipo de ticket cuando existe")
@@ -150,9 +167,9 @@ class TicketTypeServiceImplTest {
             given(ticketTypeRepository.findByIdAndEventId(1L, eventId))
                     .willReturn(Optional.of(existingTicketType));
 
-            TicketTypeResponse response = ticketTypeService.findById(eventId, 1L);
+            TicketType result = useCase.execute(eventId, 1L);
 
-            assertThat(response.getId()).isEqualTo(1L);
+            assertThat(result.getId()).isEqualTo(1L);
         }
 
         @Test
@@ -160,14 +177,21 @@ class TicketTypeServiceImplTest {
         void shouldThrow_whenNotFound() {
             given(ticketTypeRepository.findByIdAndEventId(99L, eventId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> ticketTypeService.findById(eventId, 99L))
+            assertThatThrownBy(() -> useCase.execute(eventId, 99L))
                     .isInstanceOf(TicketTypeNotFoundException.class);
         }
     }
 
     @Nested
-    @DisplayName("delete")
+    @DisplayName("DeleteTicketTypeUseCase")
     class Delete {
+
+        private DeleteTicketTypeUseCase useCase;
+
+        @BeforeEach
+        void init() {
+            useCase = new DeleteTicketTypeUseCase(eventRepository, ticketTypeRepository);
+        }
 
         @Test
         @DisplayName("debe eliminar el tipo de ticket cuando el requester es el organizador")
@@ -176,7 +200,7 @@ class TicketTypeServiceImplTest {
             given(ticketTypeRepository.findByIdAndEventId(1L, eventId))
                     .willReturn(Optional.of(existingTicketType));
 
-            ticketTypeService.delete(eventId, 1L, organizerAuth);
+            useCase.execute(eventId, 1L, organizerId, false);
 
             then(ticketTypeRepository).should().delete(existingTicketType);
         }
@@ -186,27 +210,10 @@ class TicketTypeServiceImplTest {
         void shouldThrow_whenUnauthorized() {
             given(eventRepository.findById(eventId)).willReturn(Optional.of(existingEvent));
 
-            assertThatThrownBy(() -> ticketTypeService.delete(eventId, 1L, anotherUserAuth))
+            assertThatThrownBy(() -> useCase.execute(eventId, 1L, UUID.randomUUID(), false))
                     .isInstanceOf(UnauthorizedActionException.class);
 
             then(ticketTypeRepository).should(never()).delete(any());
         }
-    }
-
-    // ─── helpers ────────────────────────────────────────────────────────────
-
-    private Authentication buildAuth(UUID userId, String role) {
-        return new UsernamePasswordAuthenticationToken(
-                userId.toString(), null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
-        );
-    }
-
-    private TicketTypeRequest buildRequest() {
-        TicketTypeRequest req = new TicketTypeRequest();
-        req.setName("VIP");
-        req.setPrice(new BigDecimal("150.00"));
-        req.setTotalQuantity(100);
-        return req;
     }
 }

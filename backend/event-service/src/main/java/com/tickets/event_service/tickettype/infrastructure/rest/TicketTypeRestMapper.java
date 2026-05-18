@@ -24,7 +24,9 @@ public class TicketTypeRestMapper {
                 request.getName(),
                 request.getDescription(),
                 Money.of(request.getPrice(), currency),
-                request.getTotalQuantity()
+                request.getTotalQuantity(),
+                request.getSaleStartDate(),
+                request.getSaleEndDate()
         );
     }
 
@@ -36,7 +38,9 @@ public class TicketTypeRestMapper {
                 request.getName(),
                 request.getDescription(),
                 Money.of(request.getPrice(), currency),
-                request.getTotalQuantity()
+                request.getTotalQuantity(),
+                request.getSaleStartDate(),
+                request.getSaleEndDate()
         );
     }
 
@@ -50,6 +54,8 @@ public class TicketTypeRestMapper {
                 .currency(ticketType.getPrice().currency())
                 .totalQuantity(ticketType.getTotalQuantity())
                 .availableQuantity(ticketType.getAvailableQuantity())
+                .saleStartDate(ticketType.getSaleStartDate())
+                .saleEndDate(ticketType.getSaleEndDate())
                 .build();
     }
 }

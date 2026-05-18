@@ -7,6 +7,7 @@ import com.tickets.notification_service.notification.infrastructure.user.dto.Use
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -24,8 +25,12 @@ class UserHttpGateway implements UserGateway {
     private final RestClient restClient;
 
     UserHttpGateway(@Value("${app.services.user-service.url}") String baseUrl) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(5000);
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
+                .requestFactory(factory)
                 .build();
     }
 
@@ -33,7 +38,7 @@ class UserHttpGateway implements UserGateway {
     public Optional<UserInfo> findById(UserId userId) {
         try {
             UserDto dto = restClient.get()
-                    .uri("/api/v1/users/{id}", userId.value())
+                    .uri("/api/v1/internal/users/{id}", userId.value())
                     .retrieve()
                     .body(UserDto.class);
             if (dto == null) return Optional.empty();

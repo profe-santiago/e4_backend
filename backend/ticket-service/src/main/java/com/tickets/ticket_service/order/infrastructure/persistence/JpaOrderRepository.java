@@ -5,6 +5,7 @@ import com.tickets.ticket_service.order.domain.OrderRepository;
 import com.tickets.ticket_service.shared.PageResult;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -36,7 +37,7 @@ public class JpaOrderRepository implements OrderRepository {
 
     @Override
     public PageResult<Order> findByUserId(UUID userId, int page, int size) {
-        Page<OrderJpaEntity> result = springData.findAllByUserId(userId, PageRequest.of(page, size));
+        Page<OrderJpaEntity> result = springData.findAllByUserId(userId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return new PageResult<>(
                 result.getContent().stream().map(mapper::toDomain).toList(),
                 result.getTotalElements(),
@@ -52,6 +53,11 @@ public class JpaOrderRepository implements OrderRepository {
                 .stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public boolean existsByPaymentIntentId(String paymentIntentId) {
+        return springData.existsByPaymentIntentId(paymentIntentId);
     }
 
     @Override

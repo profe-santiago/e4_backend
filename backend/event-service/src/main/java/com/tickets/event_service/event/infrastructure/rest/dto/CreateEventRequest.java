@@ -1,5 +1,6 @@
 package com.tickets.event_service.event.infrastructure.rest.dto;
 
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -33,6 +34,7 @@ public class CreateEventRequest {
     private String country;
 
     @NotNull(message = "La fecha de inicio es obligatoria")
+    @FutureOrPresent(message = "La fecha de inicio no puede ser en el pasado")
     private LocalDateTime startDate;
 
     private LocalDateTime endDate;

@@ -1,5 +1,6 @@
 package com.tickets.ticket_service.order.application;
 
+import com.tickets.ticket_service.exception.DuplicateOrderException;
 import com.tickets.ticket_service.order.application.dto.CreateOrderCommand;
 import com.tickets.ticket_service.order.domain.Order;
 import com.tickets.ticket_service.order.domain.OrderEventPublisher;
@@ -26,11 +27,15 @@ public class CreateOrderUseCase {
     }
 
     public Order execute(CreateOrderCommand command) {
+        if (orderRepository.existsByPaymentIntentId(command.paymentIntentId())) {
+            throw new DuplicateOrderException(command.paymentIntentId());
+        }
+
         List<OrderItem> items = command.items().stream()
                 .map(i -> OrderItem.create(i.eventId(), i.ticketTypeId(), i.quantity()))
                 .toList();
 
-        Order order = Order.create(command.userId(), command.paymentMethodId(), items);
+        Order order = Order.create(command.userId(), command.paymentIntentId(), items);
         Order saved = orderRepository.save(order);
 
         // Publica el comando asíncrono de reserva de stock — no bloquea

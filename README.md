@@ -1,42 +1,232 @@
-# E4 Backend - Plataforma de Venta de Tickets
+# EventFlow — Plataforma de Venta de Tickets
 
-Sistema de venta de tickets/entradas para eventos tipo Ticketmaster, construido con **microservicios** en **Java 21 + Spring Boot**.
+[![CI](https://github.com/MagaliCarranza/e4_backend/actions/workflows/ci.yml/badge.svg)](https://github.com/MagaliCarranza/e4_backend/actions/workflows/ci.yml)
 
-## Arquitectura
+Proyecto de venta de entradas para eventos eventFlow, construido con microservicios en **Java 21 + Spring Boot** en el backend y **React + TypeScript** en el frontend.
 
-### Microservicios
+---
+
+## Arquitectura General
+
+### Diagrama de infraestructura completo
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                      Cliente (Navegador)                           │
+│           React 19 · TypeScript · Vite · Stripe Elements          │
+└────────────────────────────┬───────────────────────────────────────┘
+                             │ HTTP  :5173 → :8080
+┌────────────────────────────▼───────────────────────────────────────┐   ┌───────────────┐
+│                     API Gateway  :8080                             │──►│  Redis  :6379 │
+│       JWT Validation · Rate Limiting · Circuit Breakers (R4J)      │   │  (rate limit) │
+└──┬──────────┬──────────┬──────────┬──────────┬─────────────────────┘   └───────────────┘
+   │          │          │          │          │          │
+:8090      :8081      :8082      :8083      :8084      :8085
+   │          │          │          │          │          │
+┌──┴──────┐ ┌─┴──────┐ ┌─┴──────┐ ┌─┴──────┐ ┌─┴──────┐ ┌─┴──────────────┐
+│  auth   │ │  user  │ │ event  │ │ticket  │ │payment │ │ notification   │
+│ service │ │service │ │service │ │service │ │service │ │   service      │
+└──┬──────┘ └─┬──────┘ └─┬──────┘ └─┬──────┘ └─┬──────┘ └─┬──────────────┘
+   │          │          │          │          │          │
+auth_db    user_db   event_db  ticket_db payment_db notif_db
+:5442      :5443     :5444     :5447     :5445     :5446
+               ▲                                        │
+               └──────── HTTP GET /users/{id} ──────────┘
+                      (notif-service consulta perfil)
+
+         ┌──────────────────────────────────────────────────────┐
+         │                   RabbitMQ  :5672                    │
+         │           tickets.topic.exchange  +  DLQ             │
+         │                                                      │
+         │  Routing Key            Productor → Consumidor(es)   │
+         │  ─────────────────────────────────────────────────   │
+         │  stock.reserve          ticket-svc → event-svc       │
+         │  stock.reserved         event-svc  → ticket-svc      │
+         │  stock.reservation.failed event-svc→ ticket-svc      │
+         │  order.confirmed        ticket-svc → payment-svc     │
+         │                         ticket-svc → notif-svc       │
+         │  payment.completed      payment-svc→ ticket-svc      │
+         │                         payment-svc→ notif-svc       │
+         │  payment.failed         payment-svc→ ticket-svc      │
+         │                         payment-svc→ notif-svc       │
+         │  order.cancelled        ticket-svc → notif-svc       │
+         │  refund.completed       payment-svc→ notif-svc       │
+         │  refund.failed          payment-svc→ notif-svc       │
+         └──────────────────────────────────────────────────────┘
+```
+
+---
+
+## Microservicios
 
 | Servicio | Puerto | Responsabilidad |
 |----------|--------|-----------------|
 | **api-gateway** | 8080 | Gateway centralizado con rate limiting, CORS y circuit breakers |
 | **auth-service** | 8090 | Autenticación y emisión de JWT |
 | **user-service** | 8081 | Gestión de perfiles de usuario |
-| **event-service** | 8082 | Catálogo de eventos y gestión de stock de tickets |
-| **ticket-service** | 8083 | Órdenes de compra y tickets físicos |
+| **event-service** | 8082 | Catálogo de eventos, tipos de ticket y gestión de stock |
+| **ticket-service** | 8083 | Órdenes de compra y tickets físicos (QR) |
 | **payment-service** | 8084 | Procesamiento de pagos con Stripe |
-| **notification-service** | 8085 | Notificaciones por email |
+| **notification-service** | 8085 | Notificaciones in-app y email |
 
-### Infraestructura
+## Infraestructura
 
-- **PostgreSQL 16**: Base de datos por servicio (Database per Service pattern)
-- **RabbitMQ 3**: Mensajería asíncrona para patrón Saga
-- **Redis 7**: Cache para rate limiting en el API Gateway
-- **Docker + Docker Compose**: Orquestación completa
+| Componente | Uso |
+|------------|-----|
+| **PostgreSQL 16** | Base de datos por servicio (Database-per-Service) |
+| **RabbitMQ 3** | Mensajería asíncrona — patrón Saga coreografiado |
+| **Redis 7** | Cache para rate limiting en el API Gateway |
+| **Cloudinary** | Almacenamiento de imágenes de eventos |
+| **Stripe** | Procesamiento de pagos con tarjeta (USD) |
+| **Docker Compose** | Orquestación completa del stack |
 
-### Patrón de Diseño
+## Patrones de Diseño
 
-- **Clean Architecture / Hexagonal**: Cada servicio tiene capas `domain`, `application`, `infrastructure`
-- **Domain-Driven Design (DDD)**: Aggregate roots, Value Objects, Rich Domain Models
-- **Saga Coreografiado**: Flujo de compra distribuido con eventos en RabbitMQ
-- **CQRS Light**: Separación de comandos y queries en aplicación
+### Patrones Arquitecturales
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Clean Architecture / Hexagonal** | Cada microservicio organiza su código en tres capas concéntricas: `domain` (núcleo, sin dependencias externas) → `application` (casos de uso) → `infrastructure` (adaptadores JPA, REST, RabbitMQ) |
+| **Domain-Driven Design (DDD)** | Cada servicio es un Bounded Context con su propia entidad raíz (Aggregate Root), Value Objects y lenguaje ubicuo |
+| **Saga Coreografiada** | El flujo de compra se coordina mediante eventos RabbitMQ entre microservicios; no hay un orquestador central. Cada servicio reacciona a eventos y emite nuevos eventos |
+| **CQRS Light** | Los casos de uso separan comandos (`CreateEventUseCase`, `RegisterUseCase`) de queries (`ListEventsUseCase`, `GetOrderUseCase`) en clases independientes |
+| **Database-per-Service** | Cada microservicio tiene su propia base de datos PostgreSQL aislada; ningún servicio accede directamente a la BD de otro |
+
+### Patrones GoF — Creacionales
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Factory Method** | Los Aggregate Roots exponen métodos de fábrica estáticos en lugar de constructores públicos: `Credential.create()`, `RefreshToken.create()`, `Event.create()`. Encapsulan la lógica de inicialización y garantizan invariantes desde la creación |
+| **Builder** | Los DTOs de respuesta usan `@Builder` de Lombok: `AuthResponse.builder().token(...).role(...).build()`. Permite construir objetos complejos con campos opcionales de forma legible |
+
+### Patrones GoF — Estructurales
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Adapter** | Toda la capa `infrastructure/` adapta tecnologías externas a contratos del dominio. Ejemplos: `JpaCredentialRepository` adapta Spring Data JPA al puerto `CredentialRepository`; `HttpAuthAdapter` adapta Axios al puerto `AuthRepository`; `UserHttpGateway` adapta `RestClient` al puerto `UserGateway` |
+| **Facade** | El `api-gateway` actúa como fachada unificada : expone un único punto de entrada (`localhost:8080`) y oculta la topología interna de los seis microservicios al cliente |
+
+### Patrones GoF — De Comportamiento
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Strategy** | El puerto `PasswordHasher` define el contrato de hashing sin atarse a ningún algoritmo. La implementación concreta `BcryptPasswordHasher` puede reemplazarse por otra estrategia sin modificar los casos de uso |
+| **Chain of Responsibility** | Los filtros de Spring Security procesan cada request en cadena (JWT filter → authorization filter). En el frontend, los interceptores de Axios (`jwt.interceptor` → `error.interceptor`) forman una cadena que enriquece y valida cada request/response |
+| **Observer / Event-Driven** | Los microservicios publican eventos de dominio en RabbitMQ (`order.confirmed`, `payment.completed`, `refund.completed`) y los consumidores interesados reaccionan de forma desacoplada sin que el publicador conozca a sus suscriptores |
+
+### Patrones de Arquitectura Empresarial
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Repository** | Interfaces de dominio (`CredentialRepository`, `EventRepository`, `OrderRepository`) abstraen completamente la persistencia; los casos de uso no conocen JPA ni SQL |
+| **DTO (Data Transfer Object)** | DTOs de request/response en cada adaptador REST evitan exponer las entidades de dominio. Cada capa define sus propios contratos de datos |
+| **Mapper** | Clases dedicadas (`CredentialPersistenceMapper`, `AuthRestMapper`) traducen entre capas sin acoplarlas directamente |
+| **Port & Adapter** | Los puertos son interfaces puras en el dominio (`TokenService`, `PasswordHasher`, `UserGateway`); los adaptadores son implementaciones en infraestructura que pueden sustituirse sin tocar el núcleo |
+
+### Patrones de Frontend
+
+| Patrón | Aplicación en el proyecto |
+|--------|--------------------------|
+| **Custom Hooks** | Encapsulan lógica de negocio y estado local (`useLogin`, `useLogout`, `useEvents`, `useCreateOrder`). Los componentes UI solo consumen el hook sin conocer la implementación |
+| **Dependency Injection vía Context** | `AuthContext` y `UserCreationContext` proveen los adaptadores HTTP a los casos de uso. Los componentes obtienen las dependencias por contexto en lugar de instanciarlas directamente |
+| **Store (Flux/Zustand)** | Estado global de autenticación centralizado en `auth.store`. Los componentes suscriben solo las partes del estado que necesitan, evitando re-renders innecesarios |
+
+---
+
+## Flujo de Compra (Saga)
+
+```
+Cliente → POST /api/v1/orders  { items, paymentMethodId }
+    │
+    ▼
+ticket-service  →  [stock.reserve]  →  event-service
+                                            │ reserva stock
+                                       [stock.reserved]
+                                            │
+ticket-service ←──────────────────────────┘
+    │ confirma orden + genera tickets
+    │
+    ├──→  [order.confirmed]  →  payment-service
+    │                               │ cobra con Stripe (USD)
+    │                          [payment.completed]
+    │                               │
+    │         notification-service ←┘
+    │              │ email + notif in-app
+    │
+    └──→  [order.confirmed]  →  notification-service
+                                    │ email "orden confirmada"
+```
+
+**Compensaciones (rollback):**
+- Si el pago falla → `payment.failed` → ticket-service libera stock → notifica al usuario
+- Si el stock no está disponible → `stock.reservation.failed` → orden cancelada
+
+---
+
+## Flujo de Registro / Login
+
+```
+1. POST /api/v1/auth/register   → crea credenciales en auth_db
+2. POST /api/v1/users           → crea perfil en user_db (requiere JWT del paso 1)
+3. POST /api/v1/auth/login      → devuelve JWT
+```
+
+> **Nota**: el registro es un proceso de dos pasos no atómico. Si el perfil de usuario no existe (404), la UI muestra un formulario para completarlo.
+
+---
+
+## Frontend
+
+**Stack**: React 19 · TypeScript · Vite · React Router v7 · TanStack Query · Zustand · React Hook Form · Zod · Stripe Elements
+
+### Arquitectura Frontend
+
+```
+src/
+├── core/
+│   ├── di/               # Contextos de inyección de dependencias
+│   └── http/             # Axios instance + interceptors JWT
+├── features/             # Módulos por dominio
+│   ├── auth/
+│   │   ├── domain/       # Entidades, puertos
+│   │   ├── application/  # Use Cases
+│   │   └── ui/           # Páginas, hooks
+│   ├── events/
+│   ├── orders/
+│   ├── tickets/
+│   ├── payments/
+│   ├── profile/
+│   └── notifications/
+├── router/               # AppRouter, PrivateRoute, RoleRoute
+├── shared/
+│   ├── components/       # Layout, Sidebar, GuestLayout
+│   └── config/           # theme, navigation, formOptions
+└── store/                # auth.store (Zustand)
+```
+
+### Roles y rutas
+
+| Rol | Acceso |
+|-----|--------|
+| **Guest** (no autenticado) | `/` (listado de eventos), `/events/:id` (detalle) |
+| **BUYER** | + `/events/:id/checkout`, `/orders`, `/tickets`, `/profile`, `/notifications` |
+| **ADMIN** | + `/my-events`, `/events/new`, `/events/:id/edit`, `/events/:id/overview`, `/admin/*` |
+
+### Integración de pagos (Stripe Elements)
+
+El checkout usa `CardNumberElement`, `CardExpiryElement` y `CardCvcElement` de `@stripe/react-stripe-js`. Los datos de tarjeta nunca tocan el servidor propio — Stripe los tokeniza directamente desde el navegador y devuelve un `paymentMethodId` que se envía al backend.
+
+**Moneda estándar: USD** para todos los eventos y tickets.
+
+---
 
 ## Inicio Rápido
 
 ### Prerrequisitos
 
 - Docker Desktop o Docker Engine + Docker Compose
-- Java 21 JDK (para desarrollo local)
-- Gradle 8.5+ (incluido wrapper)
+- Node.js 20+ (para el frontend)
+- Java 21 JDK (para desarrollo local del backend)
 
 ### 1. Clonar el Repositorio
 
@@ -48,33 +238,62 @@ cd e4_backend
 ### 2. Configurar Variables de Entorno
 
 ```bash
-# Copiar el archivo de ejemplo
 cp .env.example .env
-
-# Editar .env con tus valores
-nano .env
+# Editar .env con tus valores reales
 ```
 
-**Mínimo requerido**:
+**Variables requeridas en `backend/.env`:**
+
 ```env
-JWT_SECRET=your-secret-key-min-256-bits-for-hs256-algorithm-security
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+# JWT
+JWT_SECRET=clave-minimo-256-bits-para-hs256
+
+# Stripe
+STRIPE_SECRET_KEY=sk_test_...
+
+# Cloudinary (imágenes de eventos)
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+
+# Email SMTP (para notificaciones por email)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=tu-email@gmail.com
+MAIL_PASSWORD=app-password-de-16-caracteres
+MAIL_FROM=tu-email@gmail.com
 ```
 
-### 3. Levantar Todos los Servicios
+**Variables requeridas en `frontend/eventFlow/.env`:**
+
+```env
+VITE_API_URL=http://localhost:8080
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+### 3. Levantar el Backend
 
 ```bash
-# Construir y levantar todo el stack
-docker-compose up -d
+cd backend
+docker compose up -d
 
 # Ver logs
-docker-compose logs -f
+docker compose logs -f
 
-# Ver logs de un servicio específico
-docker-compose logs -f api-gateway
+# Logs de un servicio específico
+docker compose logs -f event-service
 ```
 
-### 4. Verificar Salud del Sistema
+### 4. Levantar el Frontend
+
+```bash
+cd frontend/eventFlow
+npm install
+npm run dev
+# Accesible en http://localhost:5173
+```
+
+### 5. Verificar Salud 
 
 ```bash
 # API Gateway health
@@ -85,54 +304,52 @@ open http://localhost:15672
 # Usuario: guest / Password: guest
 ```
 
-## Uso del API Gateway
+---
 
-### Todos los servicios son accesibles a través del gateway en `http://localhost:8080`
+## API — Ejemplos de Uso
 
-### Ejemplo: Registro y Login
+Todos los endpoints pasan por el gateway en `http://localhost:8080`.
+
+### Registro + Login
 
 ```bash
-# 1. Registrar usuario
+# 1. Registrar credenciales
+# La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "usuario@example.com",
-    "password": "password123",
-    "firstName": "Juan",
-    "lastName": "Pérez"
-  }'
+  -d '{"email":"user@example.com","password":"Secret123!","firstName":"Ana","lastName":"López"}'
 
-# 2. Login
+# Respuesta incluye token JWT para crear el perfil
+# { "userId":"...", "email":"...", "token":"eyJ...", "role":"BUYER" }
+
+# 2. Crear perfil de usuario (con el token del paso 1)
+curl -X POST http://localhost:8080/api/v1/users \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"firstName":"Ana","lastName":"López"}'
+
+# 3. Login
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "usuario@example.com",
-    "password": "password123"
-  }'
+  -d '{"email":"user@example.com","password":"secret123"}'
 
 # Respuesta:
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "userId": "123",
-  "email": "usuario@example.com",
-  "role": "USER"
-}
+# { "userId":"...", "email":"...", "token":"eyJ...", "role":"BUYER" }
 ```
 
-### Ejemplo: Listar Eventos
+> Roles posibles: `BUYER` (comprador) y `ADMIN` (organizador).
+
+### Listar Eventos
 
 ```bash
-# Eventos públicos (no requiere autenticación)
-curl http://localhost:8080/api/v1/events
+# Públicos — sin autenticación
+curl "http://localhost:8080/api/v1/events?status=PUBLISHED&page=0&size=20"
 
-# Con paginación
-curl "http://localhost:8080/api/v1/events?page=0&size=20"
-
-# Filtrar por categoría
-curl "http://localhost:8080/api/v1/events?categoryId=1"
+# Con filtros
+curl "http://localhost:8080/api/v1/events?status=PUBLISHED&categoryId=1&search=rock&city=Buenos+Aires"
 ```
 
-### Ejemplo: Crear Orden de Compra
+### Crear Orden de Compra
 
 ```bash
 TOKEN="<tu-jwt-token>"
@@ -141,254 +358,356 @@ curl -X POST http://localhost:8080/api/v1/orders \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "items": [
-      {
-        "eventId": "1",
-        "ticketTypeId": "1",
-        "quantity": 2
-      }
-    ]
+    "items": [{ "eventId": "uuid-del-evento", "ticketTypeId": 1, "quantity": 2 }],
+    "paymentMethodId": "pm_..."
   }'
 
-# Respuesta:
-{
-  "orderId": "abc123",
-  "status": "PENDING",
-  "totalAmount": 0,
-  "items": [...]
-}
-
-# La orden se procesará asíncronamente. Consultar estado:
-curl http://localhost:8080/api/v1/orders/abc123 \
-  -H "Authorization: Bearer $TOKEN"
+# Respuesta: { "id":"...", "status":"PENDING", "totalAmount":50.00, ... }
+# El procesamiento es asíncrono — consultar estado con GET /api/v1/orders/{id}
 ```
 
-## Flujo de Compra (Saga)
+> El `paymentMethodId` lo genera Stripe en el frontend a partir de los datos de tarjeta. En pruebas usar la tarjeta `4242 4242 4242 4242`.
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Gateway
-    participant TicketSvc
-    participant EventSvc
-    participant PaymentSvc
-    participant NotifSvc
-
-    Client->>Gateway: POST /orders
-    Gateway->>TicketSvc: Create Order
-    TicketSvc-->>Client: 202 {orderId, PENDING}
-
-    TicketSvc->>RabbitMQ: stock.reserve
-    RabbitMQ->>EventSvc: Reserve Stock
-    EventSvc->>EventSvc: Lock & Reserve
-    EventSvc->>RabbitMQ: stock.reserved
-
-    RabbitMQ->>TicketSvc: Stock Reserved
-    TicketSvc->>TicketSvc: Confirm Order + Generate Tickets
-    TicketSvc->>RabbitMQ: order.confirmed
-
-    RabbitMQ->>PaymentSvc: Process Payment
-    PaymentSvc->>Stripe: Charge
-    PaymentSvc->>RabbitMQ: payment.completed
-
-    RabbitMQ->>NotifSvc: Send Email
-    NotifSvc->>Client: Email with Tickets
-```
-
-## Rate Limiting
-
-El API Gateway implementa rate limiting inteligente:
-
-| Tipo de Usuario | Requests/min | Endpoint |
-|-----------------|--------------|----------|
-| Anónimo (IP) | 100 | General |
-| Autenticado | 200 | General |
-| Order Creation | 10 | POST /orders |
-
-Headers de respuesta:
-```
-X-RateLimit-Limit: 200
-X-RateLimit-Remaining: 187
-X-RateLimit-Reset: 1678901234
-```
-
-Si excedes el límite: **HTTP 429 Too Many Requests**
-
-## Circuit Breakers
-
-Cada servicio backend tiene un circuit breaker configurado. Si un servicio falla:
-
-1. Después de **5 llamadas**, el gateway evalúa la tasa de fallos
-2. Si **>50% fallan**, el circuit se abre (OPEN)
-3. Requests retornan fallback inmediatamente
-4. Después de **10 segundos**, intenta recuperación (HALF_OPEN)
-
-Ver estado:
-```bash
-curl http://localhost:8080/actuator/circuitbreakers
-```
-
-## Desarrollo
-
-### Estructura de un Servicio
-
-```
-service-name/
-├── src/main/java/com/tickets/service_name/
-│   ├── [bounded-context]/
-│   │   ├── application/          # Use Cases
-│   │   │   ├── CreateXUseCase.java
-│   │   │   └── dto/
-│   │   ├── domain/                # Domain Layer (PURE)
-│   │   │   ├── Entity.java
-│   │   │   ├── ValueObject.java
-│   │   │   ├── Repository.java   # Interface
-│   │   │   └── DomainService.java
-│   │   └── infrastructure/        # Adapters
-│   │       ├── persistence/       # JPA
-│   │       ├── rest/              # Controllers
-│   │       └── messaging/         # RabbitMQ
-│   └── config/                    # Spring Config
-└── src/main/resources/
-    ├── application.properties
-    └── db/migration/              # Flyway migrations
-```
-
-### Agregar un Nuevo Endpoint
-
-1. **Domain**: Crear entidad y lógica de negocio
-2. **Application**: Crear Use Case
-3. **Infrastructure - REST**: Crear Controller + DTOs
-4. **Infrastructure - Persistence**: Crear JPA Entity + Repository
-5. **Migraciones**: Agregar Flyway SQL migration
-
-### Ejecutar Tests
-
-```bash
-# Tests de un servicio específico
-cd event-service
-./gradlew test
-
-# Tests de integración (requiere Testcontainers)
-./gradlew integrationTest
-```
+---
 
 ## Base de Datos
 
 Cada servicio tiene su propia base de datos PostgreSQL:
 
-| Servicio | Database | Puerto Host |
-|----------|----------|-------------|
+| Servicio | Base de datos | Puerto host |
+|----------|--------------|-------------|
 | auth-service | auth_db | 5442 |
 | user-service | user_db | 5443 |
 | event-service | event_db | 5444 |
-| ticket-service | ticket_db | 5447 |
 | payment-service | payment_db | 5445 |
 | notification-service | notification_db | 5446 |
-
-### Conectar a una DB
+| ticket-service | ticket_db | 5447 |
 
 ```bash
+# Conectar a una base de datos
 psql -h localhost -p 5444 -U testuser -d event_db
 # Password: testuser
 ```
 
-### Migraciones con Flyway
+Las migraciones se aplican automáticamente con **Flyway** al iniciar cada servicio.
 
-Las migraciones se aplican automáticamente al iniciar cada servicio:
+---
 
+## Rate Limiting
+
+| Tipo de usuario | Requests/min | Endpoint |
+|-----------------|-------------|---------|
+| Anónimo (por IP) | 100 | General |
+| Autenticado | 200 | General |
+| Creación de orden | 10 | POST /orders |
+
+Headers de respuesta:
 ```
-src/main/resources/db/migration/
-├── V1__create_table_x.sql
-├── V2__add_column_y.sql
-└── V3__create_index_z.sql
+X-RateLimit-Limit: 200
+X-RateLimit-Remaining: 187
 ```
 
-## Monitoreo y Observabilidad
+Si excedés el límite: **HTTP 429 Too Many Requests**
 
-### Actuator Endpoints
+---
 
-Cada servicio expone `/actuator/*`:
+## Circuit Breakers
+
+Cada servicio tiene un circuit breaker (Resilience4j) configurado en el gateway:
+
+- Después de **5 llamadas fallidas** (>50%), el circuito se abre
+- Requests retornan fallback inmediatamente mientras el circuito está abierto
+- Después de **10 segundos**, intenta recuperación (HALF_OPEN)
 
 ```bash
-# Health check
-curl http://localhost:8082/actuator/health
-
-# Métricas
-curl http://localhost:8082/actuator/metrics
-
-# Info
-curl http://localhost:8082/actuator/info
+curl http://localhost:8080/actuator/circuitbreakers
 ```
 
-### RabbitMQ Management
-
-- UI: http://localhost:15672
-- Usuario: `guest` / Password: `guest`
-- Ver colas, exchanges, mensajes
-
-### Logs
-
-```bash
-# Ver logs en tiempo real
-docker-compose logs -f
-
-# Logs de un servicio específico
-docker-compose logs -f event-service
-
-# Últimas 100 líneas
-docker-compose logs --tail=100 ticket-service
-```
-
-## Detener y Limpiar
-
-```bash
-# Detener servicios
-docker-compose down
-
-# Detener y eliminar volúmenes (¡BORRA DATOS!)
-docker-compose down -v
-
-# Reconstruir servicios
-docker-compose up -d --build
-```
+---
 
 ## Documentación API (Swagger)
 
 Cada servicio expone documentación OpenAPI:
 
-- **Auth**: http://localhost:8090/api/docs
-- **User**: http://localhost:8081/api/docs
-- **Event**: http://localhost:8082/api/docs
-- **Ticket**: http://localhost:8083/api/docs
-- **Payment**: http://localhost:8084/api/docs
+| Servicio | URL |
+|---------|-----|
+| Auth | http://localhost:8090/api/docs |
+| User | http://localhost:8081/api/docs |
+| Event | http://localhost:8082/api/docs |
+| Ticket | http://localhost:8083/api/docs |
+| Payment | http://localhost:8084/api/docs |
+| Notification | http://localhost:8085/api/docs |
 
-**Nota**: En producción, accede a través del gateway en el puerto 8080.
+---
 
-## Próximas Mejoras
+## Estructura de un Servicio (Backend)
 
-- [ ] API Gateway + Rate Limiting ✅ **COMPLETADO**
-- [ ] Sistema de Reembolsos
-- [ ] Reservas con TTL (timeout automático)
-- [ ] Mapa interactivo de asientos
-- [ ] Validación de tickets (QR scanning)
-- [ ] Notificaciones multi-canal (SMS, Push)
-- [ ] Sistema de recomendaciones con ML
-- [ ] Observabilidad completa (Prometheus + Grafana + Zipkin)
-- [ ] Tests de carga con Gatling
+```
+service-name/
+├── src/main/java/com/tickets/service_name/
+│   ├── [bounded-context]/
+│   │   ├── domain/               # Capa de dominio (sin dependencias externas)
+│   │   │   ├── Entity.java       # Aggregate Root
+│   │   │   ├── ValueObject.java
+│   │   │   └── Repository.java   # Puerto (interfaz)
+│   │   ├── application/          # Casos de uso
+│   │   │   ├── CreateXUseCase.java
+│   │   │   └── dto/
+│   │   └── infrastructure/       # Adaptadores
+│   │       ├── persistence/      # JPA entities + repositorios Spring Data
+│   │       ├── rest/             # Controllers + DTOs REST
+│   │       └── messaging/        # Producers/Consumers RabbitMQ
+│   └── config/                   # Beans de configuración Spring
+└── src/main/resources/
+    ├── application.properties
+    └── db/migration/             # Migraciones Flyway (V1__, V2__...)
+```
 
-## Contribuir
+---
 
-1. Fork el proyecto
-2. Crea una rama feature (`git checkout -b feat/nueva-feature`)
-3. Commit tus cambios (`git commit -m 'feat: Agregar nueva feature'`)
-4. Push a la rama (`git push origin feat/nueva-feature`)
-5. Abre un Pull Request
+## Arquitectura Hexagonal — Demostración
 
-## Licencia
+La regla central es que **el dominio no conoce nada externo**: ni Spring, ni JPA, ni HTTP. Las dependencias siempre apuntan hacia adentro.
 
-Este proyecto es privado y confidencial.
+```
+domain ← application ← infrastructure
+  ↑            ↑              ↓
+(núcleo)  (casos de uso)  (Spring, JPA, HTTP)
+```
 
-## Soporte
+### 1. Dominio — sin dependencias externas
 
-Para problemas o preguntas, contactar al equipo de desarrollo.
+El dominio solo usa Java estándar. No hay `@Component`, no hay `import org.springframework.*`, no hay `import jakarta.persistence.*`.
+
+```java
+// auth-service · credential/domain/Credential.java
+package com.tickets.auth_service.credential.domain;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class Credential {                  // POJO puro
+    private UUID userId;
+    private String email;
+    private String passwordHash;
+    private String role;
+
+    public static Credential create(String email, String hash) {  // Factory Method
+        Credential c = new Credential();
+        c.userId    = UUID.randomUUID();
+        c.email     = email;
+        c.passwordHash = hash;
+        c.role      = "BUYER";
+        return c;
+    }
+}
+```
+
+### 2. Puertos — interfaces puras en el dominio
+
+Los puertos definen *qué* necesita el dominio, sin importar *cómo* se implementa.
+
+```java
+// auth-service · credential/domain/CredentialRepository.java  ← Puerto secundario
+public interface CredentialRepository {
+    Optional<Credential> findById(Long id);
+    Optional<Credential> findByEmail(String email);
+    boolean existsByEmail(String email);
+    Credential save(Credential credential);
+}
+
+// auth-service · credential/domain/PasswordHasher.java  ← Puerto secundario
+public interface PasswordHasher {
+    String hash(String plainPassword);
+    boolean matches(String plain, String hash);
+}
+```
+
+### 3. Casos de uso — dependen solo de puertos
+
+Los casos de uso orquestan la lógica recibiendo los puertos por constructor (inyección de dependencias invertida).
+
+```java
+// auth-service · credential/application/LoginUseCase.java
+@UseCase   // anotación propia, no @Service de Spring
+public class LoginUseCase {
+    private final CredentialRepository credentialRepository;  // interfaz del dominio
+    private final PasswordHasher passwordHasher;              // interfaz del dominio
+    private final TokenService tokenService;                  // interfaz del dominio
+
+    public AuthResult execute(LoginCommand command) {
+        Credential credential = credentialRepository.findByEmail(command.email())
+            .orElseThrow(InvalidCredentialsException::new);
+        // ... lógica de negocio pura
+    }
+}
+```
+
+### 4. Adaptadores — implementan los puertos en infraestructura
+
+Los adaptadores viven en `infrastructure/` y son los únicos que conocen Spring, JPA, HTTP, etc.
+
+```java
+// auth-service · credential/infrastructure/persistence/JpaCredentialRepository.java
+@Repository                                          // ← Spring solo aquí
+public class JpaCredentialRepository implements CredentialRepository {   // implementa el puerto
+    private final SpringDataCredentialRepository springData;             // Spring Data JPA
+
+    @Override
+    public Optional<Credential> findByEmail(String email) {
+        return springData.findByEmail(email).map(mapper::toDomain);      // adapta JPA → dominio
+    }
+}
+
+// auth-service · credential/infrastructure/security/BcryptPasswordHasher.java
+@Component
+public class BcryptPasswordHasher implements PasswordHasher {   // implementa el puerto
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    @Override
+    public String hash(String plain) { return encoder.encode(plain); }
+}
+```
+
+El mismo patrón se repite en todos los microservicios: `event-service`, `ticket-service`, `payment-service`, `notification-service` y `user-service`.
+
+---
+
+## Testing
+
+### Tests unitarios (Java)
+
+Los 6 microservicios tienen tests unitarios con **JUnit 5 + Mockito** que prueban la lógica de negocio de forma aislada, sin base de datos ni servicios externos.
+
+```bash
+cd backend/auth-service && ./gradlew test
+cd backend/event-service && ./gradlew test
+cd backend/ticket-service && ./gradlew test
+cd backend/user-service && ./gradlew test
+cd backend/payment-service && ./gradlew test
+cd backend/notification-service && ./gradlew test
+```
+
+El reporte HTML de cobertura (JaCoCo) se genera automáticamente en:
+```
+backend/<servicio>/build/reports/jacoco/test/html/index.html 
+```
+<img width="1620" height="700" alt="imagen" src="https://github.com/user-attachments/assets/0c5ceb14-bcc6-4d6c-bede-3c5349a4ea33" />
+
+
+### Tests de integración E2E (Python)
+
+7 tests que prueban los endpoints HTTP reales cubriendo los flujos críticos: autenticación, eventos, órdenes, pagos y perfiles de usuario.
+
+**Requisito:** tener los contenedores corriendo (`docker compose up -d`)
+
+```bash
+pip install -r backend/tests/requirements.txt
+python -m pytest backend/tests/test_microservices.py -v
+```
+
+---
+
+## Despliegue en Producción (Railway)
+
+La aplicación está desplegada en **Railway** con cada microservicio como servicio independiente.
+
+### URLs de Producción
+
+| Componente | URL |
+|---|---|
+| **Frontend** | `https://frontend-production-132ce.up.railway.app` |
+| **API Gateway** (punto de entrada) | `https://api-gateway-production-6c9a.up.railway.app` |
+| Auth Service (directo) | `https://auth-service-production-c13a.up.railway.app` |
+| User Service (directo) | `https://user-service-production-89b4.up.railway.app` |
+| Event Service (directo) | `https://event-service-production-5c26.up.railway.app` |
+| Ticket Service (directo) | `https://ticket-service-production-4142.up.railway.app` |
+| Payment Service (directo) | `https://payment-service-production-0e6b.up.railway.app` |
+| Notification Service (directo) | `https://notification-service-production-85bf.up.railway.app` |
+
+> Todo el tráfico de la demo se realiza a través del API Gateway. Las URLs directas de cada servicio son internas.
+
+### Health Check
+
+```bash
+curl https://api-gateway-production-6c9a.up.railway.app/actuator/health
+```
+
+### Infraestructura Cloud
+
+```
+Railway Project
+├── api-gateway          → https://api-gateway-production-6c9a.up.railway.app
+├── auth-service         → auth-service.railway.internal:8090
+├── user-service         → user-service.railway.internal:8081
+├── event-service        → event-service.railway.internal:8082
+├── ticket-service       → ticket-service.railway.internal:8083
+├── payment-service      → payment-service.railway.internal:8084
+├── notification-service → notification-service.railway.internal:8085
+├── PostgreSQL (x6)      → una BD por microservicio
+├── Redis                → rate limiting del gateway
+└── RabbitMQ             → mensajería asíncrona entre servicios
+```
+
+### Endpoints en Producción
+
+```bash
+BASE=https://api-gateway-production-6c9a.up.railway.app
+
+# Auth
+POST $BASE/api/v1/auth/register
+POST $BASE/api/v1/auth/login
+POST $BASE/api/v1/auth/refresh
+POST $BASE/api/v1/auth/logout
+
+# Usuarios (requiere JWT)
+POST   $BASE/api/v1/users
+GET    $BASE/api/v1/users/me
+PUT    $BASE/api/v1/users/me
+DELETE $BASE/api/v1/users/me
+
+# Eventos (GET público, resto requiere JWT)
+GET    $BASE/api/v1/events
+GET    $BASE/api/v1/events/{id}
+POST   $BASE/api/v1/events
+PUT    $BASE/api/v1/events/{id}
+DELETE $BASE/api/v1/events/{id}
+
+# Órdenes (requiere JWT)
+POST   $BASE/api/v1/orders
+GET    $BASE/api/v1/orders/my
+GET    $BASE/api/v1/orders/{id}
+PATCH  $BASE/api/v1/orders/{id}/cancel
+PATCH  $BASE/api/v1/orders/{id}/refund
+
+# Pagos, Tickets y Notificaciones (requiere JWT)
+GET    $BASE/api/v1/tickets/my
+GET    $BASE/api/v1/payments/my
+GET    $BASE/api/v1/notifications/my
+```
+
+---
+
+## Comandos Útiles
+
+```bash
+# Reconstruir un servicio específico
+docker compose up -d --build event-service
+
+# Detener todo
+docker compose down
+
+# Detener y eliminar volúmenes (borra todos los datos)
+docker compose down -v
+
+# Ver logs en tiempo real
+docker compose logs -f
+
+# RabbitMQ Management
+open http://localhost:15672  # guest / guest
+```
+
+---
+
+
+

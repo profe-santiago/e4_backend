@@ -31,6 +31,11 @@ public class SendPaymentCompletedNotificationUseCase {
     public void execute(SendPaymentCompletedCommand command) {
         log.info("[UC] SendPaymentCompleted → orderId={}, userId={}", command.orderId(), command.userId());
 
+        if (repository.existsByReferenceIdAndType(command.orderId(), NotificationType.PAYMENT_CONFIRMED)) {
+            log.warn("[UC] Notificación duplicada ignorada → orderId={}, type=PAYMENT_CONFIRMED", command.orderId());
+            return;
+        }
+
         UserId userId = UserId.of(command.userId());
 
         String subject = "¡Pago confirmado! Tus tickets están listos - Orden #" + command.orderId();

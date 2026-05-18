@@ -1,41 +1,50 @@
 package com.tickets.payment_service.payment.infrastructure.rest;
 
+import com.tickets.payment_service.payment.application.CreatePaymentIntentUseCase;
 import com.tickets.payment_service.payment.application.FindPaymentByIdUseCase;
 import com.tickets.payment_service.payment.application.FindPaymentByOrderUseCase;
+import com.tickets.payment_service.payment.domain.Money;
 import com.tickets.payment_service.payment.domain.OrderId;
 import com.tickets.payment_service.payment.domain.PaymentId;
+import com.tickets.payment_service.payment.infrastructure.rest.dto.CreatePaymentIntentRequest;
+import com.tickets.payment_service.payment.infrastructure.rest.dto.CreatePaymentIntentResponse;
 import com.tickets.payment_service.payment.infrastructure.rest.dto.PaymentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-/**
- * Adaptador de entrada HTTP.
- *
- * Recibe peticiones REST, convierte parámetros a tipos de dominio y delega
- * a los use cases correspondientes. No contiene lógica de negocio.
- */
 @RestController
-@RequestMapping("/api/payments")
-@Tag(name = "Payments", description = "Consultas de estado de pagos")
+@RequestMapping("/api/v1/payments")
+@Tag(name = "Payments", description = "Pagos y consultas de estado")
 public class PaymentController {
 
+    private final CreatePaymentIntentUseCase createPaymentIntent;
     private final FindPaymentByIdUseCase findPaymentByIdUseCase;
     private final FindPaymentByOrderUseCase findPaymentByOrderUseCase;
     private final PaymentRestMapper mapper;
 
-    public PaymentController(FindPaymentByIdUseCase findPaymentByIdUseCase,
+    public PaymentController(CreatePaymentIntentUseCase createPaymentIntent,
+                              FindPaymentByIdUseCase findPaymentByIdUseCase,
                               FindPaymentByOrderUseCase findPaymentByOrderUseCase,
                               PaymentRestMapper mapper) {
+        this.createPaymentIntent = createPaymentIntent;
         this.findPaymentByIdUseCase = findPaymentByIdUseCase;
         this.findPaymentByOrderUseCase = findPaymentByOrderUseCase;
         this.mapper = mapper;
+    }
+
+    @PostMapping("/intent")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Crear PaymentIntent — el frontend lo confirma con 3DS si es necesario")
+    public CreatePaymentIntentResponse createIntent(@Valid @RequestBody CreatePaymentIntentRequest request) {
+        var result = createPaymentIntent.execute(
+                Money.of(request.amount(), request.currency()));
+        return new CreatePaymentIntentResponse(result.clientSecret(), result.paymentIntentId());
     }
 
     @GetMapping("/{id}")

@@ -1,16 +1,17 @@
 package com.tickets.event_service.messaging;
 
-import com.tickets.event_service.messaging.event.*;
-import com.tickets.event_service.messaging.publisher.StockResultPublisher;
-import com.tickets.event_service.tickettype.TicketType;
-import com.tickets.event_service.tickettype.TicketTypeRepository;
+import com.tickets.event_service.tickettype.application.ReserveStockUseCase;
+import com.tickets.event_service.tickettype.domain.Money;
+import com.tickets.event_service.tickettype.domain.ReservedStockItem;
+import com.tickets.event_service.tickettype.domain.StockEventPublisher;
+import com.tickets.event_service.tickettype.domain.TicketType;
+import com.tickets.event_service.tickettype.domain.TicketTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -21,19 +22,19 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("StockReservationServiceImpl")
+@DisplayName("ReserveStockUseCase")
 class StockReservationServiceImplTest {
 
     @Mock private TicketTypeRepository ticketTypeRepository;
-    @Mock private StockResultPublisher  stockResultPublisher;
+    @Mock private StockEventPublisher   stockEventPublisher;
 
-    @InjectMocks
-    private StockReservationServiceImpl stockReservationService;
+    private ReserveStockUseCase useCase;
 
     private UUID orderId;
     private UUID eventId;
@@ -41,13 +42,14 @@ class StockReservationServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        useCase  = new ReserveStockUseCase(ticketTypeRepository, stockEventPublisher);
         orderId  = UUID.randomUUID();
         eventId  = UUID.randomUUID();
 
         ticketType = new TicketType();
         ticketType.setId(1L);
         ticketType.setName("General");
-        ticketType.setPrice(new BigDecimal("80.00"));
+        ticketType.setPrice(Money.ofUSD(new BigDecimal("80.00")));
         ticketType.setTotalQuantity(100);
         ticketType.setAvailableQuantity(50);
     }
@@ -57,29 +59,27 @@ class StockReservationServiceImplTest {
     class ReserveSuccess {
 
         @Test
-        @DisplayName("debe decrementar stock y publicar StockReservedEvent")
+        @DisplayName("debe decrementar stock y publicar resultado reservado")
+        @SuppressWarnings("unchecked")
         void shouldDecrementStock_andPublishReserved() {
-            StockReserveCommand command = new StockReserveCommand(
-                    orderId, UUID.randomUUID(),
-                    List.of(new StockReserveItem(eventId, 1L, 3)));
+            List<ReserveStockUseCase.ReservationItem> items = List.of(
+                    new ReserveStockUseCase.ReservationItem(eventId, 1L, 3));
 
-            given(ticketTypeRepository.findByIdForUpdate(1L)).willReturn(Optional.of(ticketType));
+            given(ticketTypeRepository.findByIdLocked(1L)).willReturn(Optional.of(ticketType));
             given(ticketTypeRepository.save(any())).willReturn(ticketType);
 
-            stockReservationService.reserve(command);
+            useCase.execute(orderId, items);
 
-            // Verifica decremento
             assertThat(ticketType.getAvailableQuantity()).isEqualTo(47);
 
-            // Verifica publicación de éxito
-            ArgumentCaptor<StockReservedEvent> captor = ArgumentCaptor.forClass(StockReservedEvent.class);
-            then(stockResultPublisher).should().publishReserved(captor.capture());
-            StockReservedEvent published = captor.getValue();
-            assertThat(published.getOrderId()).isEqualTo(orderId);
-            assertThat(published.getItems()).hasSize(1);
-            assertThat(published.getItems().get(0).getUnitPrice()).isEqualByComparingTo("80.00");
+            ArgumentCaptor<List<ReservedStockItem>> captor =
+                    ArgumentCaptor.forClass((Class<List<ReservedStockItem>>) (Class<?>) List.class);
+            then(stockEventPublisher).should().publishReserved(eq(orderId), captor.capture());
+            List<ReservedStockItem> published = captor.getValue();
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).unitPrice().amount()).isEqualByComparingTo("80.00");
 
-            then(stockResultPublisher).should(never()).publishFailed(any());
+            then(stockEventPublisher).should(never()).publishFailed(any(), any());
         }
     }
 
@@ -88,28 +88,25 @@ class StockReservationServiceImplTest {
     class ReserveInsufficientStock {
 
         @Test
-        @DisplayName("debe publicar StockFailedEvent sin modificar nada en DB")
+        @DisplayName("debe publicar fallo sin modificar nada en DB")
         void shouldPublishFailed_whenInsufficientStock() {
-            ticketType.setAvailableQuantity(1); // solo 1 disponible
+            ticketType.setAvailableQuantity(1);
 
-            StockReserveCommand command = new StockReserveCommand(
-                    orderId, UUID.randomUUID(),
-                    List.of(new StockReserveItem(eventId, 1L, 5))); // pide 5
+            List<ReserveStockUseCase.ReservationItem> items = List.of(
+                    new ReserveStockUseCase.ReservationItem(eventId, 1L, 5));
 
-            given(ticketTypeRepository.findByIdForUpdate(1L)).willReturn(Optional.of(ticketType));
+            given(ticketTypeRepository.findByIdLocked(1L)).willReturn(Optional.of(ticketType));
 
-            stockReservationService.reserve(command);
+            useCase.execute(orderId, items);
 
-            // Stock NO se modificó
             assertThat(ticketType.getAvailableQuantity()).isEqualTo(1);
 
-            ArgumentCaptor<StockFailedEvent> captor = ArgumentCaptor.forClass(StockFailedEvent.class);
-            then(stockResultPublisher).should().publishFailed(captor.capture());
-            assertThat(captor.getValue().getOrderId()).isEqualTo(orderId);
-            assertThat(captor.getValue().getReason()).contains("insuficiente");
+            ArgumentCaptor<String> reasonCaptor = ArgumentCaptor.forClass(String.class);
+            then(stockEventPublisher).should().publishFailed(eq(orderId), reasonCaptor.capture());
+            assertThat(reasonCaptor.getValue()).contains("insuficiente");
 
             then(ticketTypeRepository).should(never()).save(any());
-            then(stockResultPublisher).should(never()).publishReserved(any());
+            then(stockEventPublisher).should(never()).publishReserved(any(), any());
         }
     }
 
@@ -118,18 +115,17 @@ class StockReservationServiceImplTest {
     class ReserveNotFound {
 
         @Test
-        @DisplayName("debe publicar StockFailedEvent cuando el ticket type no existe")
+        @DisplayName("debe publicar fallo cuando el ticket type no existe")
         void shouldPublishFailed_whenTicketTypeNotFound() {
-            StockReserveCommand command = new StockReserveCommand(
-                    orderId, UUID.randomUUID(),
-                    List.of(new StockReserveItem(eventId, 99L, 1)));
+            List<ReserveStockUseCase.ReservationItem> items = List.of(
+                    new ReserveStockUseCase.ReservationItem(eventId, 99L, 1));
 
-            given(ticketTypeRepository.findByIdForUpdate(99L)).willReturn(Optional.empty());
+            given(ticketTypeRepository.findByIdLocked(99L)).willReturn(Optional.empty());
 
-            stockReservationService.reserve(command);
+            useCase.execute(orderId, items);
 
-            then(stockResultPublisher).should().publishFailed(any());
-            then(stockResultPublisher).should(never()).publishReserved(any());
+            then(stockEventPublisher).should().publishFailed(any(), any());
+            then(stockEventPublisher).should(never()).publishReserved(any(), any());
             then(ticketTypeRepository).should(never()).save(any());
         }
     }
