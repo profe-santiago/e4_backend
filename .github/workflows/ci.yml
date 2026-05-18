@@ -86,10 +86,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --detach
+      - name: Verify deployment health
+        run: |
+          echo "Railway auto-deploys on push via GitHub integration."
+          sleep 30
+          curl --fail https://api-gateway-production-6c9a.up.railway.app/actuator/health | grep '"status":"UP"'
+          echo "Deploy verified — API Gateway is UP."
