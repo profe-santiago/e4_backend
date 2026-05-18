@@ -616,6 +616,7 @@ La aplicación está desplegada en **Railway** con cada microservicio como servi
 
 | Componente | URL |
 |---|---|
+| **Frontend** | `https://frontend-production-132ce.up.railway.app` |
 | **API Gateway** (punto de entrada) | `https://api-gateway-production-6c9a.up.railway.app` |
 | Auth Service (directo) | `https://auth-service-production-c13a.up.railway.app` |
 | User Service (directo) | `https://user-service-production-89b4.up.railway.app` |
