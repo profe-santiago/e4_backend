@@ -126,7 +126,6 @@ export const ProfilePage = () => {
 
   if (isError || !user) return <div style={styles.error}>Error al cargar el perfil.</div>
 
-  const initials = getInitials(user.firstName, user.lastName)
   const previewInitials = getInitials(
     watchedFirstName || user.firstName,
     watchedLastName  || user.lastName,

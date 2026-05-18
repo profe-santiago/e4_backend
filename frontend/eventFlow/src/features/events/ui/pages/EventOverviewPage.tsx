@@ -10,12 +10,16 @@ const STATUS_LABEL: Record<EventStatus, string> = {
   DRAFT:     'Borrador',
   PUBLISHED: 'Publicado',
   CANCELLED: 'Cancelado',
+  SOLD_OUT:  'Agotado',
+  FINISHED:  'Finalizado',
 }
 
 const STATUS_COLOR: Record<EventStatus, string> = {
   DRAFT:     '#d69e2e',
   PUBLISHED: '#38a169',
   CANCELLED: '#718096',
+  SOLD_OUT:  '#e53e3e',
+  FINISHED:  '#4a5568',
 }
 
 const fmt = (price: number, currency = 'USD') =>
