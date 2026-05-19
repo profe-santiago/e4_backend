@@ -3,11 +3,13 @@ package com.tickets.auth_service.credential.infrastructure.rest;
 import com.tickets.auth_service.credential.application.LoginUseCase;
 import com.tickets.auth_service.credential.application.LogoutUseCase;
 import com.tickets.auth_service.credential.application.RefreshTokenUseCase;
+import com.tickets.auth_service.credential.application.RegisterAdminUseCase;
 import com.tickets.auth_service.credential.application.RegisterUseCase;
 import com.tickets.auth_service.credential.infrastructure.rest.dto.AuthResponse;
 import com.tickets.auth_service.credential.infrastructure.rest.dto.LoginRequest;
 import com.tickets.auth_service.credential.infrastructure.rest.dto.LogoutRequest;
 import com.tickets.auth_service.credential.infrastructure.rest.dto.RefreshRequest;
+import com.tickets.auth_service.credential.infrastructure.rest.dto.RegisterAdminRequest;
 import com.tickets.auth_service.credential.infrastructure.rest.dto.RegisterRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,17 +23,20 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final RegisterUseCase register;
+    private final RegisterAdminUseCase registerAdmin;
     private final LoginUseCase login;
     private final RefreshTokenUseCase refreshToken;
     private final LogoutUseCase logout;
     private final AuthRestMapper mapper;
 
     public AuthController(RegisterUseCase register,
+                          RegisterAdminUseCase registerAdmin,
                           LoginUseCase login,
                           RefreshTokenUseCase refreshToken,
                           LogoutUseCase logout,
                           AuthRestMapper mapper) {
         this.register = register;
+        this.registerAdmin = registerAdmin;
         this.login = login;
         this.refreshToken = refreshToken;
         this.logout = logout;
@@ -43,6 +48,13 @@ public class AuthController {
     @Operation(summary = "Registrar nuevas credenciales")
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
         return mapper.toResponse(register.execute(mapper.toCommand(request)));
+    }
+
+    @PostMapping("/register/admin")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Registrar organizador de eventos")
+    public AuthResponse registerAdmin(@Valid @RequestBody RegisterAdminRequest request) {
+        return mapper.toResponse(registerAdmin.execute(mapper.toAdminCommand(request)));
     }
 
     @PostMapping("/login")

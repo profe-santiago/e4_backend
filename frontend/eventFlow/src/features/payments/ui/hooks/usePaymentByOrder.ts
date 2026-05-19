@@ -9,9 +9,11 @@ export const usePaymentByOrder = (orderId: string, enabled = true) => {
     queryKey: ['payment-order', orderId],
     queryFn: () => new GetPaymentByOrderUseCase(paymentRepository).execute(orderId),
     enabled: enabled && !!orderId,
+    retry: 0,
     refetchInterval: (query) => {
       const status = query.state.data?.status
-      return status === 'PENDING' || status === undefined ? 3000 : false
+      if (status === 'APPROVED' || status === 'REJECTED' || status === 'REFUNDED') return false
+      return 3000
     },
   })
 }

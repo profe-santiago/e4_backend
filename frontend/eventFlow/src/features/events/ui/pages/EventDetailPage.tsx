@@ -92,7 +92,7 @@ export const EventDetailPage = () => {
         <div style={s.infoItem}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <div>
-            <span style={s.infoLabel}>Estado</span>
+            <span style={s.infoLabel}>Estado del evento</span>
             <span style={{
               ...s.infoValue,
               color: isCancelled ? t.error : event.endDate && toUtc(event.endDate) < new Date() ? t.textDim : t.success,

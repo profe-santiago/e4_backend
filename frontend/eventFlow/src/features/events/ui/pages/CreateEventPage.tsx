@@ -175,7 +175,7 @@ export const CreateEventPage = () => {
     const file = e.target.files?.[0]
     if (!file) return
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      toast.error('Formato no permitido. Usá JPEG, PNG o WEBP.')
+      toast.error('Formato no permitido. Usa JPEG, PNG o WEBP.')
       return
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -187,7 +187,7 @@ export const CreateEventPage = () => {
       const url = await eventRepository.uploadImage(file)
       setValue('imageUrl', url, { shouldValidate: true })
     } catch {
-      toast.error('Error al subir la imagen. Intentá de nuevo.')
+      toast.error('Error al subir la imagen. Intenta de nuevo.')
     } finally {
       setUploading(false)
     }
@@ -239,7 +239,7 @@ export const CreateEventPage = () => {
       toast.success('Evento creado con éxito')
       navigate('/my-events')
     } catch {
-      toast.error('Error al crear el evento. Intentá de nuevo.')
+      toast.error('Error al crear el evento. Intenta de nuevo.')
     } finally {
       submittingRef.current = false
     }

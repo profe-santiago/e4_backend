@@ -32,6 +32,12 @@ public class Credential {
         return c;
     }
 
+    public static Credential createAdmin(String email, String passwordHash) {
+        Credential c = create(email, passwordHash);
+        c.role = "ADMIN";
+        return c;
+    }
+
     // ─── Getters ──────────────────────────────────────────────────────────────
 
     public Long getId() { return id; }

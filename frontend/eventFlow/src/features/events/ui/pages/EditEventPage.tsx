@@ -207,7 +207,7 @@ export const EditEventPage = () => {
     const file = e.target.files?.[0]
     if (!file) return
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      toast.error('Formato no permitido. Usá JPEG, PNG o WEBP.')
+      toast.error('Formato no permitido. Usa JPEG, PNG o WEBP.')
       return
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -219,7 +219,7 @@ export const EditEventPage = () => {
       const url = await eventRepository.uploadImage(file)
       setValue('imageUrl', url, { shouldValidate: true, shouldDirty: true })
     } catch {
-      toast.error('Error al subir la imagen. Intentá de nuevo.')
+      toast.error('Error al subir la imagen. Intenta de nuevo.')
     } finally {
       setUploading(false)
     }
