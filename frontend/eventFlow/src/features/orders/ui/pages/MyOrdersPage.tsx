@@ -40,7 +40,7 @@ export const MyOrdersPage = () => {
       {data && (
         <>
           {data.content.length === 0
-            ? <p style={styles.feedback}>Todavía no tenés órdenes.</p>
+            ? <p style={styles.feedback}>Todavía no tienes órdenes.</p>
             : (
               <div style={styles.list}>
                 {data.content.map((order) => (

@@ -27,7 +27,7 @@ export const MyTicketsPage = () => {
           {data.content.length === 0
             ? (
               <div style={styles.empty}>
-                <p style={{ color: t.textMuted }}>Todavía no tenés tickets.</p>
+                <p style={{ color: t.textMuted }}>Todavía no tienes tickets.</p>
                 <Link to="/" className="ef-link">Ver eventos disponibles →</Link>
               </div>
             )

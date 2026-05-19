@@ -45,7 +45,7 @@ export const NotificationsPage = () => {
       {data && (
         <>
           {data.content.length === 0
-            ? <p style={styles.feedback}>No tenés notificaciones todavía.</p>
+            ? <p style={styles.feedback}>No tienes notificaciones todavía.</p>
             : (
               <div style={styles.list}>
                 {data.content.map((n) => (

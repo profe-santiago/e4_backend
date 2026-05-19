@@ -13,7 +13,7 @@ import { t } from '@/shared/config/theme'
 import { formatDateTime } from '@/shared/utils/formatDate'
 
 const formatPrice = (amount: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount)
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
 
 const formatDate = formatDateTime
 
@@ -96,8 +96,9 @@ export const OrderDetailPage = () => {
       {order.status === 'CONFIRMED' && (
         <section style={styles.section}>
           <h2 style={styles.sectionTitle}>Pago</h2>
-          {isPaymentLoading && <p style={styles.paymentMeta}>Cargando información de pago...</p>}
-          {isPaymentError && <p style={styles.paymentMeta}>No se pudo cargar el pago.</p>}
+          {(isPaymentLoading || (!payment && isPaymentError)) && (
+            <p style={styles.paymentMeta}>Cargando información de pago...</p>
+          )}
           {payment && (() => {
             const cfg = PAYMENT_STATUS[payment.status]
             return (

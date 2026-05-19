@@ -6,6 +6,7 @@ import { RoleRoute } from './RoleRoute'
 
 const LoginPage = lazy(() => import('@/features/auth/ui/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/ui/pages/RegisterPage'))
+const AdminRegisterPage = lazy(() => import('@/features/auth/ui/pages/AdminRegisterPage'))
 
 const router = createBrowserRouter([
   {
@@ -15,6 +16,10 @@ const router = createBrowserRouter([
   {
     path: '/register',
     element: <RegisterPage />,
+  },
+  {
+    path: '/admin/register',
+    element: <AdminRegisterPage />,
   },
   {
     element: <PublicRoute />,
