@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { t } from '@/shared/config/theme'
+import { Footer } from './Footer'
 
 interface Props {
   children: ReactNode
@@ -19,6 +20,7 @@ export const GuestLayout = ({ children }: Props) => (
       </div>
     </header>
     <main style={styles.main}>{children}</main>
+    <Footer />
   </div>
 )
 
