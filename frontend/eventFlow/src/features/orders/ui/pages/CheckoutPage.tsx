@@ -41,9 +41,7 @@ const IS_TEST_MODE = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk
 const TEST_CARDS = [
   { label: 'Pago exitoso (sin 3DS)',  number: '4242 4242 4242 4242' },
   { label: 'Pago exitoso (con 3DS)',  number: '4000 0025 0000 3155' },
-  { label: 'Fondos insuficientes',    number: '4000 0000 0000 9995' },
   { label: 'Tarjeta declinada',       number: '4000 0000 0000 0002' },
-  { label: 'Tarjeta vencida',         number: '4000 0000 0000 0069' },
 ]
 
 const fieldStyle = {

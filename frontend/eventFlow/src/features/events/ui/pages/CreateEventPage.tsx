@@ -348,7 +348,7 @@ export const CreateEventPage = () => {
           <div style={styles.sectionHeader}>
             <div>
               <h2 style={styles.sectionTitle}>Tipos de ticket</h2>
-              <p style={styles.sectionSub}>Podés agregar más tipos después de crear el evento.</p>
+              <p style={styles.sectionSub}>Puedes agregar más tipos después de crear el evento.</p>
             </div>
             {!showTicketForm && (
               <button type="button" className="ef-btn-ghost" style={styles.addBtn} onClick={() => setShowTicketForm(true)}>
