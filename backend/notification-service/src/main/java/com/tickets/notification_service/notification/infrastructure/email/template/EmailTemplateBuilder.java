@@ -65,7 +65,8 @@ public class EmailTemplateBuilder {
                     </tr>
                   </table>
                   <p style="margin-top:24px;">
-                    <a href="#" style="background:#2196F3; color:white; padding:12px 24px;
+                    <a href="https://frontend-production-132ce.up.railway.app/tickets"
+                       style="background:#2196F3; color:white; padding:12px 24px;
                        text-decoration:none; border-radius:4px;">Ver mis tickets</a>
                   </p>
                   <hr style="border:none; border-top:1px solid #eee; margin-top:32px;"/>

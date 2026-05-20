@@ -29,7 +29,7 @@ export const OrderDetailPage = () => {
   const navigate = useNavigate()
   const { data: order, isLoading, isError } = useOrderDetail(id ?? '')
   const { cancel, refund } = useOrderActions(id ?? '')
-  const { data: payment, isLoading: isPaymentLoading, isError: isPaymentError } = usePaymentByOrder(
+  const { data: payment, isLoading: isPaymentLoading, isError: isPaymentError, isFetching: isPaymentFetching } = usePaymentByOrder(
     order?.id ?? '',
     order?.status === 'CONFIRMED',
   )
@@ -96,8 +96,20 @@ export const OrderDetailPage = () => {
       {order.status === 'CONFIRMED' && (
         <section style={styles.section}>
           <h2 style={styles.sectionTitle}>Pago</h2>
-          {(isPaymentLoading || (!payment && isPaymentError)) && (
-            <p style={styles.paymentMeta}>Cargando información de pago...</p>
+          {(isPaymentLoading || (!payment && isPaymentFetching)) && (
+            <p style={styles.paymentMeta}>Procesando pago... esto puede tardar unos segundos.</p>
+          )}
+          {!payment && isPaymentError && !isPaymentFetching && (
+            <p style={styles.paymentMeta}>
+              El pago está tardando más de lo esperado.{' '}
+              <button
+                onClick={() => window.location.reload()}
+                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit' }}
+              >
+                Recarga la página
+              </button>{' '}
+              en unos minutos para ver el estado.
+            </p>
           )}
           {payment && (() => {
             const cfg = PAYMENT_STATUS[payment.status]

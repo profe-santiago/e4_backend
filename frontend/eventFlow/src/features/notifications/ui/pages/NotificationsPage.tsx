@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMyNotifications } from '../hooks/useMyNotifications'
 import { markNotificationsViewed } from '../hooks/useUnreadNotificationCount'
 import { PaginationControl } from '@/features/events/ui/components/PaginationControl'
-import type { NotificationStatus, NotificationType } from '../../domain/entities/Notification'
+import type { NotificationType } from '../../domain/entities/Notification'
 import { t } from '@/shared/config/theme'
 import { formatDateTime } from '@/shared/utils/formatDate'
 import { useAuthStore } from '@/store/auth.store'
@@ -15,12 +15,6 @@ const TYPE_LABELS: Record<NotificationType, string> = {
   REFUND_COMPLETED:      'Reembolso completado',
   REFUND_FAILED:         'Reembolso fallido',
   GENERAL:               'General',
-}
-
-const STATUS_COLORS: Record<NotificationStatus, string> = {
-  PENDING: '#d69e2e',
-  SENT:    '#38a169',
-  FAILED:  '#e53e3e',
 }
 
 const formatDate = formatDateTime
@@ -52,9 +46,6 @@ export const NotificationsPage = () => {
                   <div key={n.id} style={styles.card}>
                     <div style={styles.cardHeader}>
                       <span style={styles.subject}>{n.subject}</span>
-                      <span style={{ ...styles.badge, background: STATUS_COLORS[n.status] }}>
-                        {n.status}
-                      </span>
                     </div>
                     <p style={styles.type}>{TYPE_LABELS[n.type]}</p>
                     <p style={styles.message}>{n.message}</p>
@@ -87,7 +78,6 @@ const styles: Record<string, React.CSSProperties> = {
   type:       { color: t.accent, fontSize: '0.8rem', margin: '0 0 0.5rem' },
   message:    { color: t.textMuted, fontSize: '0.9rem', margin: '0 0 0.75rem', lineHeight: 1.5 },
   date:       { color: t.textDim, fontSize: '0.78rem', margin: 0 },
-  badge:      { padding: '0.2rem 0.75rem', borderRadius: '999px', color: '#fff', fontSize: '0.72rem', fontWeight: 600, flexShrink: 0 },
   feedback:   { textAlign: 'center', color: t.textMuted, marginTop: '3rem' },
   error:      { textAlign: 'center', color: t.error, marginTop: '3rem' },
 }
