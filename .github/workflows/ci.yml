@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: ["develop", "main"]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     name: Test (${{ matrix.service }})
@@ -88,7 +91,15 @@ jobs:
 
       - name: Verify deployment health
         run: |
-          echo "Railway auto-deploys on push via GitHub integration."
-          sleep 30
-          curl --fail https://api-gateway-production-6c9a.up.railway.app/actuator/health | grep '"status":"UP"'
-          echo "Deploy verified — API Gateway is UP."
+          echo "Esperando a que Railway complete el deploy..."
+          for i in {1..10}; do
+            STATUS=$(curl --silent --max-time 10 https://api-gateway-production-6c9a.up.railway.app/actuator/health || true)
+            if echo "$STATUS" | grep -q '"status":"UP"'; then
+              echo "Deploy verificado — API Gateway está UP."
+              exit 0
+            fi
+            echo "Intento $i/10 — gateway no responde aún, esperando 30s..."
+            sleep 30
+          done
+          echo "El gateway no respondió después de 5 minutos."
+          exit 1
