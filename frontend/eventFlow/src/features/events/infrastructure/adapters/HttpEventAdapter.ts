@@ -39,7 +39,9 @@ export class HttpEventAdapter implements EventRepository {
   async uploadImage(file: File): Promise<string> {
     const formData = new FormData()
     formData.append('file', file)
-    const { data } = await this.client.post<{ imageUrl: string }>('/api/v1/upload/image', formData)
+    const { data } = await this.client.post<{ imageUrl: string }>('/api/v1/upload/image', formData, {
+      headers: { 'Content-Type': undefined },
+    })
     return data.imageUrl
   }
 
