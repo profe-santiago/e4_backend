@@ -90,7 +90,10 @@ export const applyErrorInterceptor = (client: AxiosInstance): void => {
       }
 
       if (status === 403) {
-        toast.error('No tenés permiso para realizar esta acción')
+        const url = originalRequest?.url ?? ''
+        if (!url.includes('/upload/')) {
+          toast.error('No tienes permiso para realizar esta acción')
+        }
         return Promise.reject(error)
       }
 

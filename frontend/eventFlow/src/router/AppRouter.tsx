@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { PrivateRoute } from './PrivateRoute'
 import { PublicRoute } from './PublicRoute'
 import { RoleRoute } from './RoleRoute'
+import { ChunkErrorBoundary } from '@/shared/components/ChunkErrorBoundary'
 
 const LoginPage = lazy(() => import('@/features/auth/ui/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/ui/pages/RegisterPage'))
@@ -103,7 +104,9 @@ const router = createBrowserRouter([
 ])
 
 export const AppRouter = () => (
-  <Suspense fallback={<div>Cargando...</div>}>
-    <RouterProvider router={router} />
-  </Suspense>
+  <ChunkErrorBoundary>
+    <Suspense fallback={<div>Cargando...</div>}>
+      <RouterProvider router={router} />
+    </Suspense>
+  </ChunkErrorBoundary>
 )
