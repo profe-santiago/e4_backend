@@ -30,6 +30,8 @@ const passwordRules = [
 
 const schema = z
   .object({
+    firstName:       z.string().min(1, 'Requerido'),
+    lastName:        z.string().min(1, 'Requerido'),
     email:           z.string().email('Email inválido'),
     password:        z.string()
       .min(8,                'Mínimo 8 caracteres')
@@ -75,8 +77,8 @@ export default function AdminRegisterPage() {
 
   const passwordValue = useWatch({ control, name: 'password', defaultValue: '' })
 
-  const onSubmit = ({ email, password }: FormValues) =>
-    registerAdmin({ email, password })
+  const onSubmit = ({ firstName, lastName, email, password }: FormValues) =>
+    registerAdmin({ firstName, lastName, email, password })
 
   return (
     <div style={styles.container}>
@@ -93,6 +95,33 @@ export default function AdminRegisterPage() {
         <p style={styles.sub}>Crea tu cuenta para publicar y gestionar eventos</p>
 
         <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
+          <div style={styles.row}>
+            <div style={styles.field}>
+              <label htmlFor="firstName" className="ef-label">Nombre</label>
+              <input
+                id="firstName"
+                type="text"
+                {...register('firstName')}
+                className="ef-input"
+                placeholder="Juan"
+                style={errors.firstName ? styles.inputError : undefined}
+              />
+              {errors.firstName && <span className="ef-error">{errors.firstName.message}</span>}
+            </div>
+            <div style={styles.field}>
+              <label htmlFor="lastName" className="ef-label">Apellido</label>
+              <input
+                id="lastName"
+                type="text"
+                {...register('lastName')}
+                className="ef-input"
+                placeholder="Pérez"
+                style={errors.lastName ? styles.inputError : undefined}
+              />
+              {errors.lastName && <span className="ef-error">{errors.lastName.message}</span>}
+            </div>
+          </div>
+
           <div style={styles.field}>
             <label htmlFor="email" className="ef-label">Email</label>
             <input
@@ -171,6 +200,7 @@ const styles: Record<string, React.CSSProperties> = {
   heading:        { textAlign: 'center', fontSize: '1.4rem', fontWeight: 700, color: t.text, marginBottom: '0.4rem' },
   sub:            { textAlign: 'center', fontSize: '0.9rem', color: t.textMuted, marginBottom: '1.75rem' },
   form:           { display: 'flex', flexDirection: 'column', gap: '1rem' },
+  row:            { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
   field:          { display: 'flex', flexDirection: 'column', gap: '0.3rem' },
   passwordWrapper:{ position: 'relative' },
   eyeBtn:         { position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, padding: '0.25rem', lineHeight: 1, display: 'flex', alignItems: 'center' },

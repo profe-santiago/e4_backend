@@ -6,6 +6,8 @@ import { useAuthStore } from '@/store/auth.store'
 import { useAuthRepository, useUserCreationPort } from '@/core/di/AuthContext'
 
 interface RegisterAdminData {
+  firstName: string
+  lastName: string
   email: string
   password: string
 }
@@ -21,7 +23,21 @@ export const useRegisterAdmin = () => {
     setIsLoading(true)
     try {
       const result = await authRepository.registerAdmin(data.email, data.password)
-      await userCreationPort.create({ email: data.email, firstName: 'Organizador', lastName: '' }, result.token)
+
+      try {
+        await userCreationPort.create(
+          { email: data.email, firstName: data.firstName, lastName: data.lastName },
+          result.token,
+        )
+      } catch (profileError) {
+        if (axios.isAxiosError(profileError) && profileError.response?.status !== 409) {
+          setAuth({ userId: result.userId, email: result.email, role: result.role }, result.token, result.refreshToken)
+          toast.success('Cuenta creada. Si algo no se muestra correctamente, recarga la página.', { duration: 6000 })
+          navigate('/')
+          return
+        }
+      }
+
       setAuth({ userId: result.userId, email: result.email, role: result.role }, result.token, result.refreshToken)
       toast.success('Cuenta de organizador creada')
       navigate('/')
@@ -30,6 +46,8 @@ export const useRegisterAdmin = () => {
         const status = error.response?.status
         if (status === 409) {
           toast.error('Este email ya está registrado.')
+        } else if (status && status >= 500) {
+          toast.error('Hubo un problema en el servidor. Es posible que tu cuenta ya se haya creado — intenta iniciar sesión.', { duration: 8000 })
         } else {
           toast.error('No se pudo crear la cuenta. Intenta de nuevo.')
         }
