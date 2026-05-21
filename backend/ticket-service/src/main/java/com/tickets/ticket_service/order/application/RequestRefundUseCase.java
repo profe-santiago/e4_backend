@@ -2,12 +2,15 @@ package com.tickets.ticket_service.order.application;
 
 import com.tickets.ticket_service.exception.InvalidOrderStateException;
 import com.tickets.ticket_service.exception.OrderNotFoundException;
+import com.tickets.ticket_service.exception.TicketAlreadyUsedException;
 import com.tickets.ticket_service.exception.UnauthorizedActionException;
 import com.tickets.ticket_service.order.domain.Order;
 import com.tickets.ticket_service.order.domain.OrderEventPublisher;
 import com.tickets.ticket_service.order.domain.OrderRepository;
 import com.tickets.ticket_service.order.domain.OrderStatus;
 import com.tickets.ticket_service.shared.UseCase;
+import com.tickets.ticket_service.ticket.domain.TicketRepository;
+import com.tickets.ticket_service.ticket.domain.TicketStatus;
 
 import java.util.UUID;
 
@@ -24,11 +27,14 @@ public class RequestRefundUseCase {
 
     private final OrderRepository orderRepository;
     private final OrderEventPublisher eventPublisher;
+    private final TicketRepository ticketRepository;
 
     public RequestRefundUseCase(OrderRepository orderRepository,
-                                OrderEventPublisher eventPublisher) {
+                                OrderEventPublisher eventPublisher,
+                                TicketRepository ticketRepository) {
         this.orderRepository = orderRepository;
         this.eventPublisher = eventPublisher;
+        this.ticketRepository = ticketRepository;
     }
 
     public Order execute(UUID orderId, UUID requesterId, boolean isAdmin) {
@@ -41,6 +47,15 @@ public class RequestRefundUseCase {
 
         if (order.getStatus() != OrderStatus.CONFIRMED) {
             throw new InvalidOrderStateException(order.getStatus(), OrderStatus.REFUND_PENDING);
+        }
+
+        boolean hasInvalidTickets = ticketRepository.findAllByOrderId(orderId)
+                .stream()
+                .anyMatch(t -> t.getStatus() == TicketStatus.USED
+                            || t.getStatus() == TicketStatus.EXPIRED);
+
+        if (hasInvalidTickets) {
+            throw new TicketAlreadyUsedException();
         }
 
         order.requestRefund();
