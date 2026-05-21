@@ -18,6 +18,11 @@ export class HttpTicketAdapter implements TicketRepository {
     return data
   }
 
+  async getByOrderId(orderId: string): Promise<Ticket[]> {
+    const { data } = await this.client.get<Ticket[]>(`/api/v1/tickets/my/order/${orderId}`)
+    return data
+  }
+
   async validate(qrCode: string): Promise<Ticket> {
     const { data } = await this.client.post<{
       ticketId: string; orderId: string; eventId: string

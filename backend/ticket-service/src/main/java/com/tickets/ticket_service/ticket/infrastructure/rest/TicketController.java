@@ -5,6 +5,7 @@ import com.tickets.ticket_service.shared.PaginatedResponse;
 import com.tickets.ticket_service.shared.SecurityUtils;
 import com.tickets.ticket_service.ticket.application.GetMyTicketsUseCase;
 import com.tickets.ticket_service.ticket.application.GetTicketByIdUseCase;
+import com.tickets.ticket_service.ticket.application.GetTicketsByOrderUseCase;
 import com.tickets.ticket_service.ticket.application.ValidateTicketUseCase;
 import com.tickets.ticket_service.ticket.domain.Ticket;
 import com.tickets.ticket_service.ticket.infrastructure.rest.dto.TicketResponse;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -28,15 +30,18 @@ public class TicketController {
 
     private final GetMyTicketsUseCase getMyTickets;
     private final GetTicketByIdUseCase getTicketById;
+    private final GetTicketsByOrderUseCase getTicketsByOrder;
     private final ValidateTicketUseCase validateTicket;
     private final TicketRestMapper mapper;
 
     public TicketController(GetMyTicketsUseCase getMyTickets,
                              GetTicketByIdUseCase getTicketById,
+                             GetTicketsByOrderUseCase getTicketsByOrder,
                              ValidateTicketUseCase validateTicket,
                              TicketRestMapper mapper) {
         this.getMyTickets = getMyTickets;
         this.getTicketById = getTicketById;
+        this.getTicketsByOrder = getTicketsByOrder;
         this.validateTicket = validateTicket;
         this.mapper = mapper;
     }
@@ -57,6 +62,15 @@ public class TicketController {
         UUID userId = SecurityUtils.getUserId(auth);
         boolean isAdmin = SecurityUtils.isAdmin(auth);
         return mapper.toResponse(getTicketById.execute(id, userId, isAdmin));
+    }
+
+    @GetMapping("/my/order/{orderId}")
+    @Operation(summary = "Tickets de una orden del usuario autenticado")
+    public List<TicketResponse> findByOrder(@PathVariable UUID orderId, Authentication auth) {
+        UUID userId = SecurityUtils.getUserId(auth);
+        boolean isAdmin = SecurityUtils.isAdmin(auth);
+        return getTicketsByOrder.execute(orderId, userId, isAdmin)
+                .stream().map(mapper::toResponse).toList();
     }
 
     @PostMapping("/validate")
