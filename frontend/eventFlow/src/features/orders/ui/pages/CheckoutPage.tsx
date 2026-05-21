@@ -81,6 +81,10 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
   const [cardError, setCardError] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
+  if (!stripe) {
+    return <div style={styles.feedback}>Cargando formulario de pago...</div>
+  }
+
   const maxQty = Math.min(ticketType.availableQuantity, 10)
   const total = ticketType.price * quantity
   const isPending = isCreatingIntent || isCreatingOrder

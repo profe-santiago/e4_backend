@@ -4,6 +4,7 @@ import { PrivateRoute } from './PrivateRoute'
 import { PublicRoute } from './PublicRoute'
 import { RoleRoute } from './RoleRoute'
 import { ChunkErrorBoundary } from '@/shared/components/ChunkErrorBoundary'
+import { RouteErrorElement } from '@/shared/components/RouteErrorElement'
 
 const LoginPage = lazy(() => import('@/features/auth/ui/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/ui/pages/RegisterPage'))
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
   },
   {
     element: <PublicRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         path: '/',
@@ -37,6 +39,7 @@ const router = createBrowserRouter([
   },
   {
     element: <PrivateRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         path: '/events/:id/checkout',
