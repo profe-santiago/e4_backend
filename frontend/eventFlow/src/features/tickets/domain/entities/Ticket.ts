@@ -1,4 +1,4 @@
-export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED'
+export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED' | 'EXPIRED'
 
 export interface Ticket {
   id: string
