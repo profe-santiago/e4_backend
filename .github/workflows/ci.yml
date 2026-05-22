@@ -97,23 +97,23 @@ jobs:
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
-          cat > .env << EOF
-          DB_USER=testuser
-          DB_PASSWORD=testpassword123
-          JWT_SECRET=ci-testing-secret-key-minimum-32-characters-long
-          JWT_EXPIRATION_MS=86400000
-          RABBITMQ_USER=guest
-          RABBITMQ_PASS=guest
-          STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-          CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-          CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-          CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-          MAIL_HOST=smtp.gmail.com
-          MAIL_PORT=587
-          MAIL_USERNAME=noreply@test.com
-          MAIL_PASSWORD=dummy-password
-          MAIL_FROM=noreply@tickets.com
-          EOF
+          {
+            echo "DB_USER=testuser"
+            echo "DB_PASSWORD=testpassword123"
+            echo "JWT_SECRET=ci-testing-secret-key-minimum-32-characters-long"
+            echo "JWT_EXPIRATION_MS=86400000"
+            echo "RABBITMQ_USER=guest"
+            echo "RABBITMQ_PASS=guest"
+            echo "STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}"
+            echo "CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}"
+            echo "CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}"
+            echo "CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}"
+            echo "MAIL_HOST=smtp.gmail.com"
+            echo "MAIL_PORT=587"
+            echo "MAIL_USERNAME=noreply@test.com"
+            echo "MAIL_PASSWORD=dummy-password"
+            echo "MAIL_FROM=noreply@tickets.com"
+          } > .env
 
       - name: Start all services
         working-directory: backend
