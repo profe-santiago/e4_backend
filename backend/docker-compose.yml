@@ -156,21 +156,13 @@ services:
     environment:
       SERVER_PORT: 8080
       JWT_SECRET: ${JWT_SECRET}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ""
-      AUTH_SERVICE_HOST: auth-service
-      AUTH_SERVICE_PORT: 8090
-      USER_SERVICE_HOST: user-service
-      USER_SERVICE_PORT: 8081
-      EVENT_SERVICE_HOST: event-service
-      EVENT_SERVICE_PORT: 8082
-      TICKET_SERVICE_HOST: ticket-service
-      TICKET_SERVICE_PORT: 8083
-      PAYMENT_SERVICE_HOST: payment-service
-      PAYMENT_SERVICE_PORT: 8084
-      NOTIFICATION_SERVICE_HOST: notification-service
-      NOTIFICATION_SERVICE_PORT: 8085
+      REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://auth-service:8090
+      USER_SERVICE_URL: http://user-service:8081
+      EVENT_SERVICE_URL: http://event-service:8082
+      TICKET_SERVICE_URL: http://ticket-service:8083
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085
     depends_on:
       redis:
         condition: service_healthy
