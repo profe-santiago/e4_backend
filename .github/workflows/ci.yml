@@ -79,6 +79,77 @@ jobs:
           chmod +x gradlew
           ./gradlew bootJar -x test
 
+  e2e:
+    name: E2E Tests (Integration)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create .env for CI
+        working-directory: backend
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          cat > .env << EOF
+          DB_USER=testuser
+          DB_PASSWORD=testpassword123
+          JWT_SECRET=ci-testing-secret-key-minimum-32-characters-long
+          JWT_EXPIRATION_MS=86400000
+          RABBITMQ_USER=guest
+          RABBITMQ_PASS=guest
+          STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+          CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+          CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+          CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=noreply@test.com
+          MAIL_PASSWORD=dummy-password
+          MAIL_FROM=noreply@tickets.com
+          EOF
+
+      - name: Start all services
+        working-directory: backend
+        run: docker compose up -d --build
+
+      - name: Wait for API Gateway to be healthy
+        run: |
+          for i in {1..20}; do
+            STATUS=$(curl --silent --max-time 10 http://localhost:8080/actuator/health || true)
+            if echo "$STATUS" | grep -q '"status":"UP"'; then
+              echo "Servicios listos en el intento $i"
+              exit 0
+            fi
+            echo "Intento $i/20 — esperando 30s..."
+            sleep 30
+          done
+          echo "Los servicios no levantaron en 10 minutos"
+          docker compose -f backend/docker-compose.yml logs --tail=50
+          exit 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install -r backend/tests/requirements.txt
+
+      - name: Run E2E tests
+        run: pytest backend/tests/test_microservices.py -v
+
+      - name: Show service logs on failure
+        if: failure()
+        working-directory: backend
+        run: docker compose logs --tail=100
+
   deploy:
     name: Deploy to Railway
     runs-on: ubuntu-latest

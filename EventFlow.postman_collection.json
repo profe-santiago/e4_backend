@@ -13,7 +13,8 @@
     { "key": "ticketTypeId",  "value": "" },
     { "key": "orderId",       "value": "" },
     { "key": "ticketId",      "value": "" },
-    { "key": "notificationId","value": "" }
+    { "key": "notificationId",  "value": "" },
+    { "key": "paymentIntentId", "value": "" }
   ],
   "item": [
 
@@ -117,6 +118,30 @@
           }
         },
         {
+          "name": "Register (Admin/Organizer)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const data = pm.response.json();",
+                "if (data.token) {",
+                "  pm.collectionVariables.set('token', data.token);",
+                "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register/admin", "host": ["{{baseUrl}}"], "path": ["api","v1","auth","register","admin"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"organizer@example.com\",\n  \"password\": \"Admin123!\"\n}"
+            }
+          }
+        },
+        {
           "name": "Logout",
           "request": {
             "method": "POST",
@@ -179,6 +204,14 @@
               "mode": "raw",
               "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"López\",\n  \"phone\": \"+54911234567\",\n  \"birthDate\": \"1995-06-15\"\n}"
             }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","users","{{userId}}"] }
           }
         },
         {
@@ -343,6 +376,14 @@
           }
         },
         {
+          "name": "Get Ticket Type by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/ticket-types/{{ticketTypeId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","events","{{eventId}}","ticket-types","{{ticketTypeId}}"] }
+          }
+        },
+        {
           "name": "Delete Ticket Type (Admin)",
           "request": {
             "method": "DELETE",
@@ -436,6 +477,14 @@
               "mode": "raw",
               "raw": "{\n  \"amount\": 50.00,\n  \"currency\": \"USD\"\n}"
             }
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/payments/{{paymentIntentId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","payments","{{paymentIntentId}}"] }
           }
         },
         {
@@ -557,6 +606,14 @@
           }
         },
         {
+          "name": "Tickets by Order",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/tickets/my/order/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","tickets","my","order","{{orderId}}"] }
+          }
+        },
+        {
           "name": "Validate Ticket by QR (Admin)",
           "request": {
             "method": "POST",
@@ -589,6 +646,26 @@
               "query": [
                 { "key": "page", "value": "0" },
                 { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload Event Image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/upload/image", "host": ["{{baseUrl}}"], "path": ["api","v1","upload","image"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
               ]
             }
           }
