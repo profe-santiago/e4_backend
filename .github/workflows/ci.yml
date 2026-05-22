@@ -136,14 +136,14 @@ jobs:
 
       - name: Wait for auth-service to be ready
         run: |
-          for i in {1..20}; do
-            STATUS=$(curl --silent --max-time 10 http://localhost:8090/actuator/health || true)
-            if echo "$STATUS" | grep -q '"status":"UP"'; then
-              echo "Auth service listo en el intento $i"
+          for i in {1..30}; do
+            if docker logs auth_service 2>&1 | grep -q "Started AuthServiceApplication"; then
+              echo "Auth service levantó en el intento $i — esperando 30s para que el circuit breaker cierre..."
+              sleep 30
               exit 0
             fi
-            echo "Intento $i/20 — auth no está UP, esperando 15s..."
-            sleep 15
+            echo "Intento $i/30 — auth iniciando, esperando 10s..."
+            sleep 10
           done
           echo "Auth service no levantó en 5 minutos"
           docker logs auth_service --tail=50
