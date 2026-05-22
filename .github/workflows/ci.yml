@@ -149,6 +149,12 @@ jobs:
             sleep 20
           done
           echo "Auth service no respondió en 5 minutos"
+          echo "=== Contenedores activos ==="
+          docker ps -a
+          echo "=== Logs auth-service ==="
+          docker logs auth_service --tail=80
+          echo "=== Logs auth-db ==="
+          docker logs auth_db --tail=30
           exit 1
 
       - name: Set up Python 3.12
