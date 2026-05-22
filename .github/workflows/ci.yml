@@ -96,6 +96,7 @@ jobs:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
           {
             echo "DB_USER=testuser"
@@ -108,10 +109,7 @@ jobs:
             echo "CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}"
             echo "CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}"
             echo "CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}"
-            echo "MAIL_HOST=smtp.gmail.com"
-            echo "MAIL_PORT=587"
-            echo "MAIL_USERNAME=noreply@test.com"
-            echo "MAIL_PASSWORD=dummy-password"
+            echo "BREVO_API_KEY=${BREVO_API_KEY:-dummy-brevo-key-for-ci}"
             echo "MAIL_FROM=noreply@tickets.com"
           } > .env
 
