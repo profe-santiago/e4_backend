@@ -134,6 +134,23 @@ jobs:
           docker compose -f backend/docker-compose.yml logs --tail=50
           exit 1
 
+      - name: Wait for auth-service to be ready
+        run: |
+          for i in {1..15}; do
+            CODE=$(curl --silent --max-time 10 -o /dev/null -w "%{http_code}" \
+              -X POST http://localhost:8080/api/v1/auth/register \
+              -H "Content-Type: application/json" \
+              -d '{"email":"probe@ci.com","password":"Probe123!"}')
+            if [ "$CODE" = "201" ] || [ "$CODE" = "409" ]; then
+              echo "Auth service listo (status: $CODE)"
+              exit 0
+            fi
+            echo "Intento $i/15 — auth devuelve $CODE, esperando 20s..."
+            sleep 20
+          done
+          echo "Auth service no respondió en 5 minutos"
+          exit 1
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
