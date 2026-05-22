@@ -215,7 +215,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 150s
+      start_period: 300s
     networks:
       - tickets-network
     restart: on-failure
@@ -244,7 +244,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 150s
+      start_period: 300s
     networks:
       - tickets-network
     restart: on-failure
@@ -282,7 +282,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 150s
+      start_period: 300s
     networks:
       - tickets-network
     restart: on-failure
@@ -317,7 +317,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 150s
+      start_period: 300s
     networks:
       - tickets-network
     restart: on-failure
@@ -352,7 +352,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 150s
+      start_period: 300s
     networks:
       - tickets-network
     restart: on-failure
@@ -394,7 +394,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 150s
+      start_period: 300s
     networks:
       - tickets-network
     restart: on-failure

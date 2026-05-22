@@ -117,7 +117,7 @@ jobs:
 
       - name: Start all services
         working-directory: backend
-        run: docker compose up -d --build
+        run: docker compose up -d --build --wait --wait-timeout 600
 
       - name: Wait for API Gateway to be healthy
         run: |
