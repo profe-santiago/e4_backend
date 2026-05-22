@@ -9,7 +9,7 @@ import requests
 import pytest
 
 GW = "http://localhost:8080"
-PASSWORD = "Password123"
+PASSWORD = "Password123!"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
