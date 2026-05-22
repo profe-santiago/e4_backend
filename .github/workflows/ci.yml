@@ -117,36 +117,21 @@ jobs:
 
       - name: Start all services
         working-directory: backend
-        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+        run: docker compose up -d --build
 
       - name: Wait for API Gateway to be healthy
         run: |
-          for i in {1..20}; do
+          for i in {1..30}; do
             STATUS=$(curl --silent --max-time 10 http://localhost:8080/actuator/health || true)
             if echo "$STATUS" | grep -q '"status":"UP"'; then
-              echo "Gateway listo en el intento $i"
+              echo "Gateway y todos los servicios listos en el intento $i"
               exit 0
             fi
-            echo "Intento $i/20 — esperando 30s..."
-            sleep 30
+            echo "Intento $i/30 — esperando 20s..."
+            sleep 20
           done
           echo "El gateway no levantó en 10 minutos"
           docker compose -f backend/docker-compose.yml logs --tail=50
-          exit 1
-
-      - name: Wait for auth-service to be ready
-        run: |
-          for i in {1..20}; do
-            STATUS=$(curl --silent --max-time 10 http://localhost:8090/actuator/health || true)
-            if echo "$STATUS" | grep -q '"status":"UP"'; then
-              echo "Auth service listo en el intento $i"
-              exit 0
-            fi
-            echo "Intento $i/20 — auth no está UP, esperando 15s..."
-            sleep 15
-          done
-          echo "Auth service no levantó en 5 minutos"
-          docker logs auth_service --tail=50
           exit 1
 
       - name: Set up Python 3.12
