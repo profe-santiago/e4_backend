@@ -29,4 +29,13 @@ export class HttpAuthAdapter implements AuthRepository {
     const { role, userId } = decodeJwtPayload(data.token)
     return { ...data, userId, role }
   }
+
+  async registerAdmin(email: string, password: string): Promise<AuthResponse> {
+    const { data } = await this.client.post<AuthApiResponse>('/api/v1/auth/register/admin', {
+      email,
+      password,
+    })
+    const { role, userId } = decodeJwtPayload(data.token)
+    return { ...data, userId, role }
+  }
 }

@@ -9,4 +9,6 @@ RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 WORKDIR /app
 COPY --from=builder /app/build/libs/app.jar app.jar
+HEALTHCHECK --interval=15s --timeout=5s --start-period=300s --retries=5 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8081/actuator/health || exit 1
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Xmx512m", "-jar", "app.jar"]

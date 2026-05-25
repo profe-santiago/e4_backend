@@ -11,11 +11,20 @@ import { useAuthStore } from '@/store/auth.store'
 import { t } from '@/shared/config/theme'
 import { formatDate } from '@/shared/utils/formatDate'
 
+const MIN_AGE = 18
+
 const schema = z.object({
   firstName: z.string().min(1, 'Requerido'),
   lastName:  z.string().min(1, 'Requerido'),
   phone:     z.string().optional(),
-  birthDate: z.string().optional(),
+  birthDate: z.string().optional().refine((val) => {
+    if (!val) return true
+    const birth = new Date(val)
+    const today = new Date()
+    const age = today.getFullYear() - birth.getFullYear() -
+      (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0)
+    return age >= MIN_AGE
+  }, `Debés tener al menos ${MIN_AGE} años`),
   avatarUrl: z.string().url('URL inválida').optional().or(z.literal('')),
 })
 type FormValues = z.infer<typeof schema>
@@ -97,7 +106,7 @@ export const ProfilePage = () => {
       <div style={styles.card}>
         <h1 style={styles.cardTitle}>Completa tu perfil</h1>
         <p style={{ color: t.textMuted, marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: 1.6 }}>
-          Tu cuenta fue creada pero aún no tiene un perfil. Completá los datos para continuar.
+          Tu cuenta fue creada pero aún no tiene un perfil. Completa los datos para continuar.
         </p>
         <form onSubmit={handleCreateSubmit((v) => createProfile({ ...v, email: authEmail }))} style={styles.form}>
           <div style={styles.field}>
@@ -178,6 +187,7 @@ export const ProfilePage = () => {
             <div style={styles.field}>
               <label className="ef-label">Fecha de nacimiento</label>
               <input type="date" {...register('birthDate')} className="ef-input" />
+              {errors.birthDate && <span className="ef-error">{errors.birthDate.message}</span>}
             </div>
           </div>
 

@@ -3,9 +3,12 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { PrivateRoute } from './PrivateRoute'
 import { PublicRoute } from './PublicRoute'
 import { RoleRoute } from './RoleRoute'
+import { ChunkErrorBoundary } from '@/shared/components/ChunkErrorBoundary'
+import { RouteErrorElement } from '@/shared/components/RouteErrorElement'
 
 const LoginPage = lazy(() => import('@/features/auth/ui/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/ui/pages/RegisterPage'))
+const AdminRegisterPage = lazy(() => import('@/features/auth/ui/pages/AdminRegisterPage'))
 
 const router = createBrowserRouter([
   {
@@ -17,7 +20,12 @@ const router = createBrowserRouter([
     element: <RegisterPage />,
   },
   {
+    path: '/admin/register',
+    element: <AdminRegisterPage />,
+  },
+  {
     element: <PublicRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         path: '/',
@@ -31,6 +39,7 @@ const router = createBrowserRouter([
   },
   {
     element: <PrivateRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         path: '/events/:id/checkout',
@@ -98,7 +107,9 @@ const router = createBrowserRouter([
 ])
 
 export const AppRouter = () => (
-  <Suspense fallback={<div>Cargando...</div>}>
-    <RouterProvider router={router} />
-  </Suspense>
+  <ChunkErrorBoundary>
+    <Suspense fallback={<div>Cargando...</div>}>
+      <RouterProvider router={router} />
+    </Suspense>
+  </ChunkErrorBoundary>
 )

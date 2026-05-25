@@ -24,6 +24,12 @@ export default function RegisterPage() {
             Inicia sesión
           </Link>
         </p>
+        <p style={{ ...styles.footer, marginTop: '0.5rem' }}>
+          ¿Eres organizador?{' '}
+          <Link to="/admin/register" className="ef-link">
+            Regístrate aquí
+          </Link>
+        </p>
       </div>
     </div>
   )

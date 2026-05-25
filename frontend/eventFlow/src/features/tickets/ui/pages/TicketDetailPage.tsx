@@ -10,6 +10,7 @@ const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string }> = {
   ACTIVE:    { label: 'Activo',    color: '#38a169' },
   USED:      { label: 'Utilizado', color: '#718096' },
   CANCELLED: { label: 'Cancelado', color: '#e53e3e' },
+  EXPIRED:   { label: 'Vencido',   color: '#718096' },
 }
 
 const formatDate = formatDateTime

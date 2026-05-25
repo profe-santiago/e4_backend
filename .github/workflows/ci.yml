@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: ["develop", "main"]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     name: Test (${{ matrix.service }})
@@ -76,6 +79,75 @@ jobs:
           chmod +x gradlew
           ./gradlew bootJar -x test
 
+  e2e:
+    name: E2E Tests (Integration)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create .env for CI
+        working-directory: backend
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+        run: |
+          {
+            echo "DB_USER=testuser"
+            echo "DB_PASSWORD=testpassword123"
+            echo "JWT_SECRET=ci-testing-secret-key-minimum-32-characters-long"
+            echo "JWT_EXPIRATION_MS=86400000"
+            echo "RABBITMQ_USER=guest"
+            echo "RABBITMQ_PASS=guest"
+            echo "STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}"
+            echo "CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}"
+            echo "CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}"
+            echo "CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}"
+            echo "BREVO_API_KEY=${BREVO_API_KEY:-dummy-brevo-key-for-ci}"
+            echo "MAIL_FROM=noreply@tickets.com"
+          } > .env
+
+      - name: Start all services
+        working-directory: backend
+        run: docker compose up -d --build --wait --wait-timeout 600
+
+      - name: Wait for API Gateway to be healthy
+        run: |
+          for i in {1..30}; do
+            STATUS=$(curl --silent --max-time 10 http://localhost:8080/actuator/health || true)
+            if echo "$STATUS" | grep -q '"status":"UP"'; then
+              echo "Gateway y todos los servicios listos en el intento $i"
+              exit 0
+            fi
+            echo "Intento $i/30 — esperando 20s..."
+            sleep 20
+          done
+          echo "El gateway no levantó en 10 minutos"
+          docker compose -f backend/docker-compose.yml logs --tail=50
+          exit 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install -r backend/tests/requirements.txt
+
+      - name: Run E2E tests
+        run: pytest backend/tests/test_microservices.py -v
+
+      - name: Show service logs on failure
+        if: failure()
+        working-directory: backend
+        run: docker compose logs --tail=100
+
   deploy:
     name: Deploy to Railway
     runs-on: ubuntu-latest
@@ -88,7 +160,15 @@ jobs:
 
       - name: Verify deployment health
         run: |
-          echo "Railway auto-deploys on push via GitHub integration."
-          sleep 30
-          curl --fail https://api-gateway-production-6c9a.up.railway.app/actuator/health | grep '"status":"UP"'
-          echo "Deploy verified — API Gateway is UP."
+          echo "Esperando a que Railway complete el deploy..."
+          for i in {1..10}; do
+            STATUS=$(curl --silent --max-time 10 https://api-gateway-production-6c9a.up.railway.app/actuator/health || true)
+            if echo "$STATUS" | grep -q '"status":"UP"'; then
+              echo "Deploy verificado — API Gateway está UP."
+              exit 0
+            fi
+            echo "Intento $i/10 — gateway no responde aún, esperando 30s..."
+            sleep 30
+          done
+          echo "El gateway no respondió después de 5 minutos."
+          exit 1

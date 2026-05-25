@@ -1,5 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
+import { Footer } from './Footer'
 import { t } from '@/shared/config/theme'
 
 interface AppLayoutProps {
@@ -30,6 +31,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
           </button>
         )}
         <div style={styles.content}>{children}</div>
+        <Footer />
       </main>
       {isMobile && (
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />

@@ -4,12 +4,14 @@ Requiere que los contenedores estén corriendo: docker compose up -d
 Ejecutar con: python -m pytest tests/test_microservices.py -v
 """
 
+import os
 import time
 import requests
 import pytest
 
 GW = "http://localhost:8080"
-PASSWORD = "Password123"
+PASSWORD = "Password123!"
+TICKET_PRICE_CENTS = 5000  # $50.00 USD — debe coincidir con el precio en published_event
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -19,8 +21,8 @@ PASSWORD = "Password123"
 @pytest.fixture(scope="session")
 def organizer_token(ts):
     email = f"organizer_{ts}@test.com"
-    r = requests.post(f"{GW}/api/v1/auth/register", json={"email": email, "password": PASSWORD}, timeout=30)
-    assert r.status_code == 201, f"Registro organizer falló: {r.text}"
+    r = requests.post(f"{GW}/api/v1/auth/register/admin", json={"email": email, "password": PASSWORD}, timeout=30)
+    assert r.status_code == 201, f"Registro organizer admin falló: {r.text}"
     return r.json()["token"]
 
 
@@ -35,6 +37,24 @@ def buyer_token(ts):
 @pytest.fixture(scope="session")
 def ts():
     return int(time.time())
+
+
+@pytest.fixture(scope="session")
+def payment_intent_id():
+    """Crea y confirma un PaymentIntent de Stripe en modo test para la saga de pago."""
+    import stripe as stripe_lib
+    stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not stripe_key:
+        pytest.skip("STRIPE_SECRET_KEY no disponible")
+    stripe_lib.api_key = stripe_key
+    intent = stripe_lib.PaymentIntent.create(
+        amount=TICKET_PRICE_CENTS,
+        currency="usd",
+        payment_method="pm_card_visa",
+        payment_method_types=["card"],
+        confirm=True,
+    )
+    return intent.id
 
 
 @pytest.fixture(scope="session")
@@ -149,14 +169,14 @@ def test_3_event_lifecycle(published_event):
 # TEST 4 — Compra de tickets (saga): orden → CONFIRMED → tickets generados
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_4_order_and_tickets_saga(buyer_token, published_event):
+def test_4_order_and_tickets_saga(buyer_token, published_event, payment_intent_id):
     """Crea una orden y espera que la saga asíncrona la confirme y genere tickets."""
     event_id = published_event["event_id"]
     ticket_type_id = published_event["ticket_type_id"]
 
     payload = {
         "items": [{"eventId": event_id, "ticketTypeId": ticket_type_id, "quantity": 1}],
-        "paymentMethodId": "pm_card_visa",
+        "paymentIntentId": payment_intent_id,
     }
     r = requests.post(
         f"{GW}/api/v1/orders",

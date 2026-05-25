@@ -53,7 +53,7 @@ export const MyEventsPage = () => {
       </div>
 
       {events.length === 0 ? (
-        <p style={styles.empty}>No tenés eventos todavía. ¡Creá el primero!</p>
+        <p style={styles.empty}>No tienes eventos todavía. ¡Crea el primero!</p>
       ) : (
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
@@ -115,7 +115,7 @@ export const MyEventsPage = () => {
         <div style={styles.overlay}>
           <div style={styles.modal}>
             <p style={styles.modalText}>
-              ¿Estás seguro que querés eliminar este evento? Esta acción{' '}
+              ¿Estás seguro que quieres eliminar este evento? Esta acción{' '}
               <strong>no se puede deshacer</strong>.
             </p>
             <div style={styles.modalActions}>

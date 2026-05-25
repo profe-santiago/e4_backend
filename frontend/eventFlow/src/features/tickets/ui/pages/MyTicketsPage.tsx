@@ -9,6 +9,7 @@ const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string }> = {
   ACTIVE:    { label: 'Activo',    color: '#38a169' },
   USED:      { label: 'Utilizado', color: '#718096' },
   CANCELLED: { label: 'Cancelado', color: '#e53e3e' },
+  EXPIRED:   { label: 'Vencido',   color: '#718096' },
 }
 
 
@@ -27,7 +28,7 @@ export const MyTicketsPage = () => {
           {data.content.length === 0
             ? (
               <div style={styles.empty}>
-                <p style={{ color: t.textMuted }}>Todavía no tenés tickets.</p>
+                <p style={{ color: t.textMuted }}>Todavía no tienes tickets.</p>
                 <Link to="/" className="ef-link">Ver eventos disponibles →</Link>
               </div>
             )

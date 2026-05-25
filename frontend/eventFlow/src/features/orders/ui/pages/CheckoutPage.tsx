@@ -13,24 +13,35 @@ import type { TicketType } from '@/features/events/domain/entities/TicketType'
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string)
 
 const STRIPE_ERROR_MESSAGES: Record<string, string> = {
-  insufficient_funds: 'Fondos insuficientes. Verificá el saldo de tu tarjeta.',
-  card_declined:      'Tarjeta declinada. Intentá con otra tarjeta.',
-  expired_card:       'La tarjeta está vencida.',
-  incorrect_cvc:      'El código de seguridad es incorrecto.',
-  processing_error:   'Error al procesar el pago. Intentá de nuevo.',
+  insufficient_funds:         'Fondos insuficientes. Verifica el saldo de tu tarjeta.',
+  card_declined:              'Tarjeta declinada. Intenta con otra tarjeta.',
+  expired_card:               'La tarjeta está vencida.',
+  incorrect_cvc:              'El código de seguridad es incorrecto.',
+  processing_error:           'Error al procesar el pago. Intenta de nuevo.',
+  do_not_honor:               'Tarjeta declinada por el banco. Contacta a tu banco.',
+  card_not_supported:         'Esta tarjeta no es compatible. Intenta con otra.',
+  currency_not_supported:     'Esta tarjeta no acepta la moneda de la transacción.',
+  duplicate_transaction:      'Transacción duplicada. Espera unos minutos antes de reintentar.',
+  fraudulent:                 'Transacción bloqueada por seguridad. Contacta a tu banco.',
+  generic_decline:            'Tarjeta declinada. Intenta con otra tarjeta.',
+  incorrect_number:           'El número de tarjeta es incorrecto.',
+  invalid_expiry_month:       'El mes de vencimiento es inválido.',
+  invalid_expiry_year:        'El año de vencimiento es inválido.',
+  invalid_cvc:                'El código de seguridad es inválido.',
+  lost_card:                  'Tarjeta reportada como perdida. Usa otra tarjeta.',
+  stolen_card:                'Tarjeta reportada como robada. Usa otra tarjeta.',
+  withdrawal_count_limit_exceeded: 'Límite de transacciones excedido. Intenta mañana o con otra tarjeta.',
 }
 
-const stripeErrorMessage = (code?: string, fallback?: string): string =>
-  (code && STRIPE_ERROR_MESSAGES[code]) ?? fallback ?? 'El pago fue rechazado.'
+const stripeErrorMessage = (code?: string): string =>
+  (code && STRIPE_ERROR_MESSAGES[code]) ?? 'El pago fue rechazado. Verifica los datos e intenta de nuevo.'
 
 const IS_TEST_MODE = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_')
 
 const TEST_CARDS = [
   { label: 'Pago exitoso (sin 3DS)',  number: '4242 4242 4242 4242' },
   { label: 'Pago exitoso (con 3DS)',  number: '4000 0025 0000 3155' },
-  { label: 'Fondos insuficientes',    number: '4000 0000 0000 9995' },
   { label: 'Tarjeta declinada',       number: '4000 0000 0000 0002' },
-  { label: 'Tarjeta vencida',         number: '4000 0000 0000 0069' },
 ]
 
 const fieldStyle = {
@@ -70,6 +81,10 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
   const [cardError, setCardError] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
+  if (!stripe) {
+    return <div style={styles.feedback}>Cargando formulario de pago...</div>
+  }
+
   const maxQty = Math.min(ticketType.availableQuantity, 10)
   const total = ticketType.price * quantity
   const isPending = isCreatingIntent || isCreatingOrder
@@ -91,7 +106,7 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
       clientSecret = intent.clientSecret
       paymentIntentId = intent.paymentIntentId
     } catch {
-      setCardError('No se pudo iniciar el pago. Intentá de nuevo.')
+      setCardError('No se pudo iniciar el pago. Intenta de nuevo.')
       return
     }
 
@@ -101,12 +116,12 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
     })
 
     if (error) {
-      setCardError(stripeErrorMessage(error.code, error.message))
+      setCardError(stripeErrorMessage(error.code))
       return
     }
 
     if (paymentIntent?.status !== 'succeeded') {
-      setCardError('El pago no pudo completarse. Intentá de nuevo.')
+      setCardError('El pago no pudo completarse. Intenta de nuevo.')
       return
     }
 
@@ -190,7 +205,7 @@ const PaymentForm = ({ event, ticketType }: PaymentFormProps) => {
 
       {submitted && !isPending && (
         <p style={styles.submittedHint}>
-          Si hubo un error, revisá{' '}
+          Si hubo un error, revisa{' '}
           <button style={styles.linkBtn} onClick={() => navigate('/orders')}>Mis órdenes</button>
           {' '}antes de intentar de nuevo.
         </p>

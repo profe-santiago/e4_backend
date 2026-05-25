@@ -7,7 +7,7 @@ export const ImagePreview = ({ url }: { url: string }) => {
   if (hasError) {
     return (
       <div style={styles.error}>
-        No se pudo cargar la imagen. Verificá la URL.
+        No se pudo cargar la imagen. Verifica la URL.
       </div>
     )
   }

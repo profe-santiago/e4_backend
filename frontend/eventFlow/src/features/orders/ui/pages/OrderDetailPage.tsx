@@ -5,6 +5,7 @@ import { useOrderDetail } from '../hooks/useOrderDetail'
 import { useOrderActions } from '../hooks/useOrderActions'
 import { OrderStatusTracker } from '../components/OrderStatusTracker'
 import { usePaymentByOrder } from '@/features/payments/ui/hooks/usePaymentByOrder'
+import { useTicketsByOrder } from '@/features/tickets/ui/hooks/useTicketsByOrder'
 import { useTicketTypeRepository } from '@/core/di/TicketTypeContext'
 import { ListTicketTypesByEventUseCase } from '@/features/events/application/use-cases/ListTicketTypesByEventUseCase'
 import type { PaymentStatus } from '@/features/payments/domain/entities/Payment'
@@ -13,7 +14,7 @@ import { t } from '@/shared/config/theme'
 import { formatDateTime } from '@/shared/utils/formatDate'
 
 const formatPrice = (amount: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount)
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
 
 const formatDate = formatDateTime
 
@@ -29,9 +30,13 @@ export const OrderDetailPage = () => {
   const navigate = useNavigate()
   const { data: order, isLoading, isError } = useOrderDetail(id ?? '')
   const { cancel, refund } = useOrderActions(id ?? '')
-  const { data: payment, isLoading: isPaymentLoading, isError: isPaymentError } = usePaymentByOrder(
+  const { data: payment, isLoading: isPaymentLoading, isError: isPaymentError, isFetching: isPaymentFetching } = usePaymentByOrder(
     order?.id ?? '',
     order?.status === 'CONFIRMED',
+  )
+  const { data: orderTickets = [] } = useTicketsByOrder(order?.id ?? '', order?.status === 'CONFIRMED')
+  const hasUsedOrExpiredTickets = orderTickets.some(
+    t => t.status === 'USED' || t.status === 'EXPIRED'
   )
 
   const ticketTypeRepo = useTicketTypeRepository()
@@ -96,8 +101,21 @@ export const OrderDetailPage = () => {
       {order.status === 'CONFIRMED' && (
         <section style={styles.section}>
           <h2 style={styles.sectionTitle}>Pago</h2>
-          {isPaymentLoading && <p style={styles.paymentMeta}>Cargando información de pago...</p>}
-          {isPaymentError && <p style={styles.paymentMeta}>No se pudo cargar el pago.</p>}
+          {(isPaymentLoading || (!payment && isPaymentFetching)) && (
+            <p style={styles.paymentMeta}>Procesando pago... esto puede tardar unos segundos.</p>
+          )}
+          {!payment && isPaymentError && !isPaymentFetching && (
+            <p style={styles.paymentMeta}>
+              El pago está tardando más de lo esperado.{' '}
+              <button
+                onClick={() => window.location.reload()}
+                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit' }}
+              >
+                Recarga la página
+              </button>{' '}
+              en unos minutos para ver el estado.
+            </p>
+          )}
           {payment && (() => {
             const cfg = PAYMENT_STATUS[payment.status]
             return (
@@ -130,10 +148,15 @@ export const OrderDetailPage = () => {
             {cancel.isPending ? 'Cancelando...' : 'Cancelar orden'}
           </button>
         )}
-        {order.status === 'CONFIRMED' && (
+        {order.status === 'CONFIRMED' && !hasUsedOrExpiredTickets && (
           <button className="ef-btn-ghost" disabled={refund.isPending} onClick={() => refund.mutate()}>
             {refund.isPending ? 'Procesando...' : 'Solicitar reembolso'}
           </button>
+        )}
+        {order.status === 'CONFIRMED' && hasUsedOrExpiredTickets && (
+          <p style={styles.refundBlocked}>
+            No es posible solicitar reembolso porque uno o más boletos ya fueron utilizados.
+          </p>
         )}
         {order.status === 'REFUND_PENDING' && (
           <p style={styles.refundSent}>
@@ -169,4 +192,5 @@ const styles: Record<string, React.CSSProperties> = {
   paymentValue:  { fontWeight: 500, fontSize: '0.9rem', color: t.text },
   badge:         { display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: '#fff' },
   refundSent:    { fontSize: '0.875rem', color: t.textMuted, margin: 0, lineHeight: 1.5 },
+  refundBlocked: { fontSize: '0.875rem', color: t.textMuted, margin: 0, lineHeight: 1.5 },
 }

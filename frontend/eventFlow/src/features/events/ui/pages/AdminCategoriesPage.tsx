@@ -134,7 +134,7 @@ export const AdminCategoriesPage = () => {
         <div style={styles.overlay}>
           <div style={styles.modal}>
             <p style={styles.modalText}>
-              ¿Estás seguro que querés eliminar esta categoría? Esta acción{' '}
+              ¿Estás seguro que quieres eliminar esta categoría? Esta acción{' '}
               <strong>no se puede deshacer</strong>.
             </p>
             <div style={styles.modalActions}>
